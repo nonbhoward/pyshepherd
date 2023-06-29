@@ -3,3 +3,4 @@
 .idea
 # Patterns
 *.egg-info
+*.pyc
