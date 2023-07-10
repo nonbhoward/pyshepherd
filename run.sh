@@ -1,4 +1,4 @@
-# If not exist pyshepherd.egg-info, run $pip install -e .
+# A CLI launcher for the linux environment
 
 # Initialize constants
 fn_egg="pyshepherd.egg-info"
