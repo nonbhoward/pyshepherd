@@ -19,10 +19,6 @@ class SystemManager:
         self._debug = debug
         self._network_connected = None
 
-        # Perform checks
-        self.disk_check()
-        self.network_check()
-
     def run(self):
         self.disk_check()
         if require_network:

@@ -1,35 +1,32 @@
+import os
 from os import environ
+home = os.environ.get("HOME")
 
-# GLOBAL VALUES BELOW
+# MAIN VALUES BELOW
 DEBUG = False
-# GLOBAL VALUES ABOVE
+# MAIN VALUES ABOVE
 
 # DUPLICATE MANAGER VALUES BELOW
-
-# Dict : duplicate_search_targets : The locations
-#   that will be searched in an attempt to identify
-#   duplicated files.
-# Key : 'enabled'. Allows discrete toggling of
-#   disable/enable per path.
-# Key : 'path_to_check'. The path from which to
-#   read all files.
-# Key : 'path_to_result'. The location to record
-#   the result.
-username = environ.get("USERNAME")
-duplicate_search_targets = {
+# BUF_SIZE is to prevent hashing of large files from consuming
+#   system resources by hashing the file in BUF_SIZE chunks
+BUF_SIZE = 65536
+archives = {
+    'archive_a': {
+        'source_path': '',
+        'stage_path': '',
+        'archive_path': '',
+        'unstage_path': ''
+    },
+    'archive_b': {
+        'source_path': '',
+        'stage_path': '',
+        'archive_path': '',
+        'unstage_path': ''
+    }
 }
-
-# Float : duplicate_size_lookaround : When
-#   searching for duplicates, it seems that the
-#   most obvious place to start searching is
-#   similarly sized files. This value sets a threshold
-#   for how far the algorithm will "look around".
-#   For example, a value of 0.05 indicates that the
-#   algorithm will search files that are of size
-#   larger than (file_size - file_size * 0.05) and
-#   smaller than (file_size + file_size * 0.05).
-duplicate_size_lookaround = 0.05
-
+# Available values : md5, sha1
+#   Determines which hashing algorithm to use
+hash_algo = 'md5'
 # DUPLICATE MANAGER VALUES ABOVE
 
 # SYSTEM MANAGER VALUES BELOW
@@ -46,5 +43,5 @@ network_check_delay = 1
 #   since only the first and last snapshots are compared.
 network_check_count = 2
 # If enabled, requires internet connectivity
-require_network = True
+require_network = False
 # SYSTEM MANAGER VALUES ABOVE
