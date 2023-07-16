@@ -4,6 +4,7 @@ from subprocess import run
 # imports, project
 from src.enumerations import Command
 from src.enumerations import Disk
+from src.enumerations import Network
 
 
 class SystemManager:
@@ -49,6 +50,10 @@ def disks_ready():
 
 
 def network_ready():
+    """Ensure that network is available and active"""
+    network_snapshot_1 = read_network_state(cmd=Command.Network.ifconfig)
+    network_snapshot_2 = read_network_state(cmd=Command.Network.ifconfig)
+    network_snapshot_3 = read_network_state(cmd=Command.Network.ifconfig)
     pass
 
 
@@ -57,9 +62,19 @@ def read_disk_state(cmd=Command.Disk.df) -> dict:
     return _parse_raw_disk_state(_read_raw_disk_state(cmd))
 
 
+def read_network_state(cmd=Command.Network.ifconfig) -> dict:
+    """Get information about the current state the network"""
+    return _parse_raw_network_state(_read_raw_network_state(cmd))
+
+
 def _read_raw_disk_state(cmd) -> str:
     if cmd == Command.Disk.df:
         return str(run(['df'], capture_output=True).stdout.decode())
+
+
+def _read_raw_network_state(cmd) -> str:
+    if cmd == Command.Network.ifconfig:
+        return str(run(['ifconfig'], capture_output=True).stdout.decode())
 
 
 def _parse_raw_disk_state(raw_disk_state, cmd=Command.Disk.df):
@@ -87,6 +102,58 @@ def _parse_raw_disk_state(raw_disk_state, cmd=Command.Disk.df):
                 }
             })
     return disk_state
+
+
+def _parse_raw_network_state(raw_network_state, cmd=Command.Network.ifconfig):
+    raw_network_state_lines = raw_network_state.split('\n')
+    _verify_header(raw_network_state_lines, cmd)
+    network_state = {}
+    for raw_network_state_line in raw_network_state_lines:
+        if cmd == Command.Network.ifconfig:
+            # Split and remove blank entries
+            nsl = network_state_line = [val for val in raw_network_state_line.split(' ') if val]
+
+            if not network_state_line:
+                continue
+
+            if 'flags' in raw_network_state_line:
+                interface = network_state_line[0]
+
+            if network_state_line[0] in Network.Interface.skip:
+                continue  # Skip some interfaces
+
+            # An interface has been found, read and populate until the next
+            if network_state_line[0] == interface:
+                # Initialize the new entry
+                network_state.update({
+                    interface: {
+                        'flags': network_state_line[1],
+                        'maximum_transmission_unit': nsl[2] + ' ' + nsl[3]
+                    }
+                })
+            elif nsl[0] == 'inet':
+                network_state[interface].update({
+                    nsl[0] + ' ' + nsl[1]: nsl[2] + ' ' + nsl[3]
+                })
+            elif nsl[1] == 'packets':
+                network_state[interface].update({
+                    nsl[0] + ' ' + nsl[1]: {
+                        nsl[1]: nsl[2],
+                        nsl[3]: nsl[4],
+                        'xfer': nsl[5] + nsl[6]
+                    }
+                })
+            elif nsl[1] == 'errors':
+                network_state[interface].update({
+                    nsl[0] + ' ' + nsl[1]: {
+                        nsl[1]: nsl[2],
+                        nsl[3]: nsl[4],
+                        nsl[5]: nsl[6],
+                        nsl[7]: nsl[8]
+                    }
+                })
+
+    return network_state
 
 
 def _verify_header(raw_disk_state_lines: list, cmd: str):

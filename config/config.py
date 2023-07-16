@@ -17,22 +17,6 @@ DEBUG = False
 #   the result.
 username = environ.get("USERNAME")
 duplicate_search_targets = {
-    'blk_green': {
-        'enabled': True,
-        'path_to_check':
-            f'/media/{username}/hdd_8TB_blk/green/',
-        'path_to_result':
-            f'/media/{username}/hdd_8TB_blk/green/'
-            f'_duplicate_candidates_/'
-    },
-    'slv_green': {
-        'enabled': False,
-        'path_to_check':
-            f'/media/{username}/hdd_8TB_slv/green/',
-        'path_to_result':
-            f'/media/{username}/hdd_8TB_slv/green/'
-            f'_duplicate_candidates_/'
-    }
 }
 
 # Float : duplicate_size_lookaround : When

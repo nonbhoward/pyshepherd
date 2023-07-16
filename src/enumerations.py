@@ -11,6 +11,9 @@ class Command:
     class Disk:
         df = 'df'
 
+    class Network:
+        ifconfig = 'ifconfig'
+
     class Output:
         df = {
             'Header Columns': [
@@ -32,4 +35,17 @@ class Disk:
         # Define Filesystems to ignore and skip
         skip = [
             'tmpfs'
+        ]
+
+
+class Network:
+    # Define network interface requirements
+    interface = {
+        'wlp0s20f3': {}
+    }
+
+    class Interface:
+        # Define interfaces to ignore and skip
+        skip = [
+            'lo'
         ]
