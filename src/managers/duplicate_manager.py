@@ -3,14 +3,17 @@ import copy
 from hashlib import md5
 from hashlib import sha1
 from os import walk
-from os.path import exists
 from pathlib import Path
 
 # imports, project
 from config.config import archives
 from config.config import BUF_SIZE
 from config.config import hash_algo
+from src.lib import get_filename_from
+from src.lib import transform_file_path_to_folder
+from src.lib import transform_file_path_to_soft_link
 from src.managers.archive_metadata_manager import ArchiveMetadataManager
+from src.managers.file_manager import FileManager
 
 # Hash generators
 if hash_algo == 'sha1':
@@ -71,6 +74,7 @@ class DuplicateManager:
         self._debug = debug
         # Store metadata about each archive
         self.amm = ArchiveMetadataManager(archives)
+        self.fm = FileManager()
 
     def run(self):
         for archive_name, paths in self.amm.archives.items():
@@ -100,12 +104,15 @@ class DuplicateManager:
         self.amm.md.set_duplicates(archive_name, duplicates)
 
     def unstage_duplicates(self, archive_name):
-        unstage_path = self.amm.path_unstage(archive_name)
         archive_duplicates = self.amm.md.get_duplicates(archive_name)
-        for file, duplicates in archive_duplicates.items():
+        for original, duplicates in archive_duplicates.items():
             for duplicate in duplicates:
-                self.unstage_duplicate(archive_name, duplicate)
-            pass
+                self.unstage_duplicate(archive_name, original, duplicate)
+
+    def unstage_duplicate(self, archive_name, original, duplicate):
+        unstage_path = self.amm.path_unstage(archive_name)
+        unstaging_metadata = build_unstaging_metadata_for(unstage_path, original, duplicate)
+        self.fm.unstage(unstaging_metadata)
 
     def validate_source_path(self):
         pass
@@ -206,3 +213,28 @@ def read_all_files(path):
 
 def read_source(archive):
     pass
+
+
+def build_unstaging_metadata_for(unstage_path, original, duplicate):
+    # Generate the metadata to return
+    soft_link_to_original = transform_file_path_to_soft_link(original)
+    duplicate_filename = get_filename_from(duplicate)
+    unstaged_destination_for_duplicate = \
+        build_unstaged_destination_for(unstage_path, original)
+
+    # Package and return the metadata
+    unstaging_metadata = {
+        'path_to_duplicate': duplicate,
+        'path_to_original': original,
+        'soft_link_name': soft_link_to_original,
+        'unstage_path': unstaged_destination_for_duplicate,
+    }
+    return unstaging_metadata
+
+
+def build_unstaged_destination_for(unstage_path, original_filename):
+    # Use the original filename as the container for duplicates,
+    #   to avoid spawning a folder per duplicate
+    duplicate_folder = transform_file_path_to_folder(original_filename)
+    unstaged_destination = Path(unstage_path, duplicate_folder)
+    return unstaged_destination
