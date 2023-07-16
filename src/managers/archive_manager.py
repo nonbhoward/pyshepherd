@@ -9,9 +9,9 @@ from pathlib import Path
 from config.config import Archives
 from config.config import BUF_SIZE
 from config.config import hash_algo
-from src.lib import get_filename_from
-from src.lib import transform_file_path_to_folder
-from src.lib import transform_file_path_to_soft_link
+from src.lib.lib import get_filename_from
+from src.lib.lib import transform_file_path_to_folder
+from src.lib.lib import transform_file_path_to_soft_link
 from src.managers.archive_metadata_manager import ArchiveMetadataManager
 from src.managers.file_manager import FileManager
 
