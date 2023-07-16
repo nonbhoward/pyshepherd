@@ -12,10 +12,10 @@ DEBUG = False
 BUF_SIZE = 65536
 archives = {
     'archive_a': {
-        'source_path': '',
-        'stage_path': '',
-        'archive_path': '',
-        'unstage_path': ''
+        'source_path': f'',
+        'stage_path': f'',
+        'archive_path': f'',
+        'unstage_path': f''
     },
     'archive_b': {
         'source_path': '',
