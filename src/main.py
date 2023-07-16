@@ -2,7 +2,7 @@
 
 # imports, project
 from config.config import DEBUG
-from src.managers.duplicate_manager import ArchiveManager
+from src.managers.archive_manager import ArchiveManager
 from src.managers.system_manager import SystemManager
 from src.shepherd.shepherd import Shepherd
 
