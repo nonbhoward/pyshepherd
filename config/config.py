@@ -10,7 +10,11 @@ DEBUG = False
 # BUF_SIZE is to prevent hashing of large files from consuming
 #   system resources by hashing the file in BUF_SIZE chunks
 BUF_SIZE = 65536
-archives = {
+# Archives is the collected archives that will be managed by the
+#   archive manager class. Each archive has a label, and four
+#   paths. The use of those paths is described in the archive
+#   manager class documentation
+Archives = {
     'archive_a': {
         'source_path': f'',
         'stage_path': f'',
