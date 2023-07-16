@@ -1,7 +1,11 @@
 # imports, python
 from subprocess import run
+from time import sleep
 
 # imports, project
+from config.config import network_check_count
+from config.config import network_check_delay
+from config.config import require_network
 from src.enumerations import Command
 from src.enumerations import Disk
 from src.enumerations import Network
@@ -21,7 +25,8 @@ class SystemManager:
 
     def run(self):
         self.disk_check()
-        self.network_check()
+        if require_network:
+            self.network_check()
 
     @staticmethod
     def disk_check():
@@ -51,10 +56,18 @@ def disks_ready():
 
 def network_ready():
     """Ensure that network is available and active"""
-    network_snapshot_1 = read_network_state(cmd=Command.Network.ifconfig)
-    network_snapshot_2 = read_network_state(cmd=Command.Network.ifconfig)
-    network_snapshot_3 = read_network_state(cmd=Command.Network.ifconfig)
-    pass
+    network_snapshots = []
+    for _ in range(network_check_count):
+        network_snapshots.append(read_network_state(cmd=Command.Network.ifconfig))
+        sleep(network_check_delay)
+        if not network_snapshots[0]:
+            return False  # No interfaces found, is wifi disabled?
+    try:
+        _validate_network_snapshots(network_snapshots)
+    except OSError as exc:
+        print(exc)
+        return False
+    return True
 
 
 def read_disk_state(cmd=Command.Disk.df) -> dict:
@@ -108,6 +121,11 @@ def _parse_raw_network_state(raw_network_state, cmd=Command.Network.ifconfig):
     raw_network_state_lines = raw_network_state.split('\n')
     _verify_header(raw_network_state_lines, cmd)
     network_state = {}
+    # This flag is necessary because when an interface is skipped, the lines
+    #   following will attempt to be parsed. This prevents that and instead
+    #   directs the loop to search for the next line containing 'flags'. That
+    #   line will be the interface, and then the flag is deactivated.
+    interface_search_active = True
     for raw_network_state_line in raw_network_state_lines:
         if cmd == Command.Network.ifconfig:
             # Split and remove blank entries
@@ -117,9 +135,14 @@ def _parse_raw_network_state(raw_network_state, cmd=Command.Network.ifconfig):
                 continue
 
             if 'flags' in raw_network_state_line:
+                interface_search_active = False
                 interface = network_state_line[0]
 
+            if interface_search_active:
+                continue  # These lines are part of a skipped interface
+
             if network_state_line[0] in Network.Interface.skip:
+                interface_search_active = True
                 continue  # Skip some interfaces
 
             # An interface has been found, read and populate until the next
@@ -154,6 +177,19 @@ def _parse_raw_network_state(raw_network_state, cmd=Command.Network.ifconfig):
                 })
 
     return network_state
+
+
+def _validate_network_snapshots(network_snapshots):
+    byte_rx_snapshots = []
+    byte_tx_snapshots = []
+    for idx, network_snapshot in enumerate(network_snapshots):
+        for interface, details in network_snapshot.items():
+            byte_rx_snapshots.append(int(details['RX packets']['bytes']))
+            byte_tx_snapshots.append(int(details['TX packets']['bytes']))
+    byte_rx_delta = byte_rx_snapshots[-1] - byte_rx_snapshots[0]
+    byte_tx_delta = byte_tx_snapshots[-1] - byte_tx_snapshots[0]
+    if not byte_rx_delta or byte_tx_delta:
+        raise OSError('No network activity detected')
 
 
 def _verify_header(raw_disk_state_lines: list, cmd: str):

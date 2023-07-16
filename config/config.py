@@ -31,3 +31,20 @@ duplicate_search_targets = {
 duplicate_size_lookaround = 0.05
 
 # DUPLICATE MANAGER VALUES ABOVE
+
+# SYSTEM MANAGER VALUES BELOW
+# Time to wait between checks of the network interfaces
+#   This is used to ensure that they are active, so some
+#   delay must be used to allow the ifconfig command to
+#   update.
+network_check_delay = 1
+# Note that each time a network check count is added, each
+#   check requires a wait time of network_check_delay. This
+#   will create a total wait time of :
+#       network_check_delay * network_check_count
+# At the moment, there is no practical reason to change this value
+#   since only the first and last snapshots are compared.
+network_check_count = 2
+# If enabled, requires internet connectivity
+require_network = True
+# SYSTEM MANAGER VALUES ABOVE

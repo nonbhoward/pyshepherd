@@ -47,5 +47,5 @@ class Network:
     class Interface:
         # Define interfaces to ignore and skip
         skip = [
-            'lo'
+            'lo:'
         ]
