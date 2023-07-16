@@ -6,7 +6,7 @@ home = os.environ.get("HOME")
 DEBUG = False
 # MAIN VALUES ABOVE
 
-# DUPLICATE MANAGER VALUES BELOW
+# ARCHIVE MANAGER VALUES BELOW
 # BUF_SIZE is to prevent hashing of large files from consuming
 #   system resources by hashing the file in BUF_SIZE chunks
 BUF_SIZE = 65536
@@ -31,7 +31,7 @@ Archives = {
 # Available values : md5, sha1
 #   Determines which hashing algorithm to use
 hash_algo = 'md5'
-# DUPLICATE MANAGER VALUES ABOVE
+# ARCHIVE MANAGER VALUES ABOVE
 
 # SYSTEM MANAGER VALUES BELOW
 # Time to wait between checks of the network interfaces
