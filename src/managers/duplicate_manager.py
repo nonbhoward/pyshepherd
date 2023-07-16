@@ -6,7 +6,7 @@ from os import walk
 from pathlib import Path
 
 # imports, project
-from config.config import archives
+from config.config import Archives
 from config.config import BUF_SIZE
 from config.config import hash_algo
 from src.lib import get_filename_from
@@ -24,11 +24,11 @@ else:
     raise RuntimeError(f'Unknown hash_algo value set : {hash_algo}')
 
 
-class DuplicateManager:
+class ArchiveManager:
     """This class finds duplicate files by hashing their contents and comparing
         the hashes to the hashes of other files.
 
-    The duplicate manager works in a similar fashion to git.
+    The archive manager works in a similar fashion to git.
         The key locations (in order of timeline) are :
             "source file location" called "source"
             "staging file location" called "stage"
@@ -73,7 +73,7 @@ class DuplicateManager:
     def __init__(self, debug=False):
         self._debug = debug
         # Store metadata about each archive
-        self.amm = ArchiveMetadataManager(archives)
+        self.amm = ArchiveMetadataManager(Archives)
         self.fm = FileManager()
 
     def run(self):
