@@ -5,29 +5,13 @@ from types import MappingProxyType
 class ArchiveMetadataManager:
     def __init__(self, archives):
         # Make archives dict immutable
-        self.mpt_archives = MappingProxyType(archives)
+        self._mpt_archives = MappingProxyType(archives)
+        self.metadata = {}
 
-    class Metadata:
-        def __init__(self, archive_name):
-            self.duplicates = {
-                archive_name: {
-                    'duplicates': []
-                }
-            }
-
-        def get_duplicates(self, archive_name):
-            return self.duplicates[archive_name]['duplicates']
-
-        def set_duplicates(self, archive_name, duplicates):
-            self.duplicates = {
-                archive_name: {
-                    'duplicates': duplicates
-                }
-            }
-
+    # Archives functions
     @property
     def archives(self):
-        return self.mpt_archives
+        return dict(self._mpt_archives)
 
     def path_archive(self, archive_name):
         return self.archives[archive_name]['archive_path']
@@ -40,3 +24,13 @@ class ArchiveMetadataManager:
 
     def path_unstage(self, archive_name):
         return self.archives[archive_name]['unstage_path']
+
+    # Metadata functions
+    def read_metadata(self, archive_name):
+        return self.metadata[archive_name]
+
+    def write_metadata(self, archive_name, file_metadata):
+        self.metadata[archive_name] = file_metadata
+
+    def update_metadata(self, archive_name, file_metadata):
+        self.metadata[archive_name].update({file_metadata})

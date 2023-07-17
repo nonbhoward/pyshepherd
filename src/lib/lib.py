@@ -1,11 +1,26 @@
 # General purpose functions
 
-def get_filename_from(file):
-    return file.split('/')[-1]
+# imports, python
+from os import walk
+
+
+def read_all_files(path):
+    all_files = []
+    for root, _, files in walk(path):
+        for file in files:
+            all_files.append(root + '/' + file)
+    return all_files
+
+
+def transform_filename_to_pathed_filename(file):
+    file_elements = file.split('/')
+    pathed_filename = '_'.join(file_elements)
+    return pathed_filename
 
 
 def transform_file_path_to_soft_link(file):
-    return '_'.join(file.split('/'))
+    file_elements = file.split('/')
+    return '_'.join(file_elements)
 
 
 def transform_file_path_to_folder(file_name):

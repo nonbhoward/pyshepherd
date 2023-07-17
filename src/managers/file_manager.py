@@ -15,8 +15,11 @@ class FileManager:
         # Read metadata
         path_to_duplicate = unstaging_metadata['path_to_duplicate']
         path_to_original = unstaging_metadata['path_to_original']
-        soft_link = unstaging_metadata['soft_link_name']
-        unstage_path = unstaging_metadata['unstage_path']
+        pathed_duplicate_filename = unstaging_metadata['pathed_duplicate_filename']
+        soft_link_name = unstaging_metadata['soft_link_name']
+        unstage_path = \
+            str(Path(unstaging_metadata['unstage_path'],
+                     pathed_duplicate_filename))
 
         # Create file structure
         self.make_dir(unstage_path)
@@ -24,7 +27,7 @@ class FileManager:
             raise OSError(f'Failed to mkdir : {unstage_path}')
 
         # Create soft-link to original and relocate duplicate
-        self.create_soft_link(unstage_path, path_to_original, soft_link)
+        self.create_soft_link(unstage_path, path_to_original, soft_link_name)
         self.move_file(path_to_duplicate, unstage_path)
 
     @staticmethod

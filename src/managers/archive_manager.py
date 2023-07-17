@@ -2,18 +2,15 @@
 import copy
 from hashlib import md5
 from hashlib import sha1
-from os import walk
-from pathlib import Path
 
 # imports, project
 from config.config import Archives
 from config.config import BUF_SIZE
 from config.config import hash_algo
-from src.lib.lib import get_filename_from
-from src.lib.lib import transform_file_path_to_folder
-from src.lib.lib import transform_file_path_to_soft_link
+from src.lib.lib import read_all_files
 from src.managers.archive_metadata_manager import ArchiveMetadataManager
 from src.managers.file_manager import FileManager
+from src.managers.stage_manager import StageManager
 
 # Hash generators
 if hash_algo == 'sha1':
@@ -73,14 +70,14 @@ class ArchiveManager:
     def __init__(self, debug=False):
         self._debug = debug
         # Store metadata about each archive
-        self.amm = ArchiveMetadataManager(Archives)
-        self.fm = FileManager()
+        self.archive_metadata_manager = ArchiveMetadataManager(Archives)
+        self.file_manager = FileManager()
+        self.stage_manager = StageManager()
 
     def run(self):
-        for archive_name, paths in self.amm.archives.items():
-            self.amm.md = ArchiveMetadataManager.Metadata(archive_name)
+        for archive_name, paths in self.archive_metadata_manager.archives.items():
             self.validate_archive(archive_name)
-            if self.amm.md.get_duplicates(archive_name):
+            if self.archive_metadata_manager.read_metadata(archive_name):
                 self.unstage_duplicates(archive_name)
             else:
                 # Validate source and staging paths
@@ -95,24 +92,19 @@ class ArchiveManager:
 
     def validate_archive(self, archive_name):
         """Verify that the archive contains no duplicate files"""
-        path_archive = self.amm.path_archive(archive_name)
+        path_archive = self.archive_metadata_manager.path_archive(archive_name)
         archive_files = read_all_files(path_archive)
         if not archive_files:
             print(f'Archive is empty or path is incorrect : {path_archive}')
             exit()
-        duplicates = archive_self_check(generate_hashes(archive_files))
-        self.amm.md.set_duplicates(archive_name, duplicates)
+        unstage_metadata = archive_self_check(generate_hashes(archive_files))
+        self.archive_metadata_manager.write_metadata(archive_name, unstage_metadata)
 
     def unstage_duplicates(self, archive_name):
-        archive_duplicates = self.amm.md.get_duplicates(archive_name)
-        for original, duplicates in archive_duplicates.items():
-            for duplicate in duplicates:
-                self.unstage_duplicate(archive_name, original, duplicate)
-
-    def unstage_duplicate(self, archive_name, original, duplicate):
-        unstage_path = self.amm.path_unstage(archive_name)
-        unstaging_metadata = build_unstaging_metadata_for(unstage_path, original, duplicate)
-        self.fm.unstage(unstaging_metadata)
+        archive_duplicates = \
+            self.archive_metadata_manager.read_metadata(archive_name)
+        self.stage_manager.load_metadata(archive_duplicates)
+        self.stage_manager.run('unstage')
 
     def validate_source_path(self):
         pass
@@ -132,15 +124,18 @@ class ArchiveManager:
 
 
 def archive_self_check(archive_hashes):
-    archive_duplicates = _get_archive_duplicates(archive_hashes)
-    if archive_duplicates:
-        print(f'Archive is invalid, {len(archive_duplicates)} duplicate files '
+    unstage_metadata = _get_archive_duplicates(archive_hashes)
+    if unstage_metadata:
+        print(f'Archive invalid, {len(unstage_metadata)} duplicate files '
               f'found')
-        return archive_duplicates
+        return unstage_metadata
 
 
 def _get_archive_duplicates(archive_hashes):
-    archive_duplicates = {}
+    unstage_metadata = {
+        'type': 'archive',
+        'unstage': {}
+    }
     archive_hashes_dc = copy.deepcopy(archive_hashes)
     found_duplicates = []
     # While dictionary has files
@@ -156,7 +151,7 @@ def _get_archive_duplicates(archive_hashes):
                 break  # This file is already identified as a duplicate
 
             # Init duplicate tracking for this a_file
-            duplicate_list = []  # Duplicates for this file
+            duplicate_metadata = {}  # Duplicates for this file
             for aa_file, aa_hash in archive_hashes.items():
 
                 if a_file == aa_file:
@@ -167,20 +162,20 @@ def _get_archive_duplicates(archive_hashes):
                     print(f'Duplicate file found in archive : {a_file}')
                     # Initialize list of duplicates
                     found_duplicates.append(aa_file)
-                    if not duplicate_list:
-                        duplicate_list = [aa_file]
+                    if not duplicate_metadata:
+                        duplicate_metadata = {aa_file: {}}
                     else:
                         # Update list of duplicates
-                        duplicate_list.append(aa_file)
-                    archive_duplicates.update({
-                        a_file: duplicate_list
+                        duplicate_metadata.update({aa_file: {}})
+                    unstage_metadata['unstage'].update({
+                        a_file: duplicate_metadata
                     })
 
             # The internal loop has concluded, discard this value
             del archive_hashes_dc[a_file]
             break  # Force restart of the for loop with new dict
 
-    return archive_duplicates
+    return unstage_metadata
 
 
 def generate_hashes(archive_files):
@@ -201,40 +196,3 @@ def generate_hash(archive_file):
                 break
             hasher.update(data)
     return hasher.hexdigest()
-
-
-def read_all_files(path):
-    all_files = []
-    for root, _, files in walk(path):
-        for file in files:
-            all_files.append(root + '/' + file)
-    return all_files
-
-
-def read_source(archive):
-    pass
-
-
-def build_unstaging_metadata_for(unstage_path, original, duplicate):
-    # Generate the metadata to return
-    soft_link_to_original = transform_file_path_to_soft_link(original)
-    duplicate_filename = get_filename_from(duplicate)
-    unstaged_destination_for_duplicate = \
-        build_unstaged_destination_for(unstage_path, original)
-
-    # Package and return the metadata
-    unstaging_metadata = {
-        'path_to_duplicate': duplicate,
-        'path_to_original': original,
-        'soft_link_name': soft_link_to_original,
-        'unstage_path': unstaged_destination_for_duplicate,
-    }
-    return unstaging_metadata
-
-
-def build_unstaged_destination_for(unstage_path, original_filename):
-    # Use the original filename as the container for duplicates,
-    #   to avoid spawning a folder per duplicate
-    duplicate_folder = transform_file_path_to_folder(original_filename)
-    unstaged_destination = Path(unstage_path, duplicate_folder)
-    return unstaged_destination

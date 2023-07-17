@@ -1,4 +1,4 @@
-# imports, python
+# The python entry-point
 
 # imports, project
 from config.config import DEBUG
