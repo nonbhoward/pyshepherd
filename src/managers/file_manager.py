@@ -3,7 +3,6 @@
 # imports python
 from os import mkdir
 from os.path import exists
-from pathlib import Path
 from shutil import copy
 from shutil import move
 from subprocess import run
@@ -11,40 +10,37 @@ from subprocess import run
 
 class FileManager:
 
-    def unstage(self, unstaging_metadata):
-        # Read metadata
-        path_to_duplicate = unstaging_metadata['path_to_duplicate']
-        path_to_original = unstaging_metadata['path_to_original']
-        pathed_duplicate_filename = unstaging_metadata['pathed_duplicate_filename']
-        soft_link_name = unstaging_metadata['soft_link_name']
-        unstage_path = \
-            str(Path(unstaging_metadata['unstage_path'],
-                     pathed_duplicate_filename))
-
-        # Create file structure
-        self.make_dir(unstage_path)
-        if not exists(unstage_path):
-            raise OSError(f'Failed to mkdir : {unstage_path}')
-
-        # Create soft-link to original and relocate duplicate
-        self.create_soft_link(unstage_path, path_to_original, soft_link_name)
-        self.move_file(path_to_duplicate, unstage_path)
+    def __init__(self, detail_manager):
+        self.detail_manager = detail_manager
 
     @staticmethod
-    def make_dir(dir_to_make):
-        if exists(dir_to_make):
-            return
+    def create_required_folders(unstage_file_details):
+        unstage_parent_folder = \
+            str(unstage_file_details[
+                    'unstage_storage_details'][
+                    'unstage_parent_folder'])
+        udes = unstage_destination_elements = unstage_parent_folder.split('/')
+        progressive_path = ''
+        for ude in udes:
+            progressive_path += ude + '/' if ude else '/'
+            if not exists(progressive_path):
+                try:
+                    mkdir(progressive_path)
+                except OSError as exc:
+                    print(f'Failed to make path : {progressive_path}, {exc}')
+                    raise exc
+
+    @staticmethod
+    def create_soft_link(soft_link_command):
         try:
-            mkdir(dir_to_make)
+            run(soft_link_command)
         except OSError as exc:
-            print(f'Failed to mkdir : {dir_to_make}')
+            print(f'Failed to create soft link : {soft_link_command}, {exc}')
             raise exc
 
-    def create_soft_link(self, path, path_to_original, link_name):
-        path_to_soft_link = str(Path(path, link_name))
-        ln_output = run(['ln', '-s', path_to_original, path_to_soft_link], capture_output=True)
-        if hasattr(ln_output, 'stderr'):
-            print(f'{ln_output.stderr}')
+    def move_duplicate_files(self, unstage_file, unstage_file_details):
+        destination_parent_folder = unstage_file_details['unstage_storage_details']
+        pass
 
     def copy_file(self, src, dst):
         self.validate_paths(src, dst)

@@ -11,70 +11,73 @@ from src.lib.lib import convert_filepath_to_soft_link_name
 
 class StageManager:
 
-    def run(self, action):
-        if action == 'unstage':
-            self.pre_unstage_files()
-            self.unstage_files()
-        elif action == 'stage':
-            self.pre_stage_files()
-            self.stage_files()
+    def __init__(self, detail_manager):
+        self.detail_manager = detail_manager
 
-    def load_metadata(self, file_metadata, unstage_path):
-        archive_type = file_metadata['type']
+    def load_metadata(self, unstage_metadata, unstage_path):
+        archive_type = unstage_metadata['type']
         if archive_type == 'archive':
-            self.populate_unstage_metadata(file_metadata, unstage_path)
+            self.populate_unstage_metadata(unstage_metadata, unstage_path)
 
-    def populate_unstage_metadata(self, file_metadata, unstage_path):
-        self._update_with_unstaging_destinations(file_metadata, unstage_path)
-        self._update_with_soft_links(file_metadata, unstage_path)
+    def populate_unstage_metadata(self, unstage_metadata, unstage_path):
+        self._update_with_unstaging_destinations(unstage_metadata, unstage_path)
+        self._update_with_soft_links(unstage_metadata, unstage_path)
 
     @staticmethod
-    def _update_with_unstaging_destinations(file_metadata, unstage_path):
-        file_metadata_dc = copy.deepcopy(file_metadata)
+    def _update_with_unstaging_destinations(unstage_metadata, unstage_path):
+        file_metadata_dc = copy.deepcopy(unstage_metadata)
         for original_file_dc, unstage_details_dc in file_metadata_dc['unstage'].items():
             for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
-                unstage_destination = \
-                    _build_unstage_storage_path(
+                unstage_storage_details = \
+                    _build_unstage_storage_details(
                         original_file_dc,
                         unstage_file_dc,
                         unstage_path)
-                file_metadata['unstage'][
+                unstage_metadata['unstage'][
                     original_file_dc][
                     unstage_file_dc].update({
-                        'unstage_destination': unstage_destination})
+                        'unstage_storage_details': unstage_storage_details})
 
     @staticmethod
-    def _update_with_soft_links(file_metadata, unstage_path):
-        file_metadata_dc = copy.deepcopy(file_metadata)
-        for original_file_dc, unstage_details_dc in file_metadata_dc['unstage'].items():
+    def _update_with_soft_links(unstage_metadata, unstage_path):
+        unstage_metadata_dc = copy.deepcopy(unstage_metadata)
+        for original_file_dc, unstage_details_dc in unstage_metadata_dc['unstage'].items():
             for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
                 soft_link_command = _build_soft_link_command(
                     original_file_dc,
                     unstage_path
                 )
-                file_metadata['unstage'][
+                unstage_metadata['unstage'][
                     original_file_dc][
                     unstage_file_dc].update({
                         'soft_link_command': soft_link_command})
 
-    def pre_stage_files(self):
-        pass
-
-    def pre_unstage_files(self):
-        pass
-
     def stage_files(self):
         pass
 
-    def unstage_files(self):
+    @staticmethod
+    def unstage_files(unstage_metadata, file_manager):
+        unstage_metadata = unstage_metadata['unstage']
+        for original_file, unstage_details in unstage_metadata.items():
+            for unstage_file, unstage_file_details in unstage_details.items():
+                file_manager.create_required_folders(unstage_file_details)
+                soft_link_command = unstage_file_details['soft_link_command']
+                file_manager.create_soft_link(soft_link_command)
+                file_manager.move_duplicate_files(unstage_file, unstage_file_details)
         pass
 
 
-def _build_unstage_storage_path(original, unstage_file, unstage_path):
+def _build_unstage_storage_details(original, unstage_file, unstage_path):
     original_filepath_as_name = convert_filepath_to_filename(original)
     unstage_filepath_as_name = convert_filepath_to_filename(unstage_file)
-    unstage_destination = Path(unstage_path, original_filepath_as_name, unstage_filepath_as_name)
-    return unstage_destination
+    unstage_parent_folder = Path(unstage_path, original_filepath_as_name)
+    unstage_file_destination = \
+        Path(unstage_path, original_filepath_as_name, unstage_filepath_as_name)
+    unstage_storage_details = {
+        'unstage_parent_folder': unstage_parent_folder,
+        'unstage_file_destination': unstage_file_destination
+    }
+    return unstage_storage_details
 
 
 def _build_soft_link_command(original, unstage_path):

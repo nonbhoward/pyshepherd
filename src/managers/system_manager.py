@@ -3,25 +3,20 @@ from subprocess import run
 from time import sleep
 
 # imports, project
-from config.config import network_check_count
-from config.config import network_check_delay
-from config.config import require_network
 from src.enumerations import Command
 from src.enumerations import Disk
 from src.enumerations import Network
 
 
 class SystemManager:
-    def __init__(
-            self,
-            debug=False
-    ):
-        self._debug = debug
+    def __init__(self, detail_manager):
+        self.detail_manager = detail_manager
+        self._debug = detail_manager.debug
         self._network_connected = None
 
     def run(self):
         self.disk_check()
-        if require_network:
+        if self.detail_manager.require_network:
             self.network_check()
 
     @staticmethod
@@ -29,9 +24,8 @@ class SystemManager:
         if not disks_ready():
             raise OSError(f'Disks in unexpected state')
 
-    @staticmethod
-    def network_check():
-        if not network_ready():
+    def network_check(self):
+        if not network_ready(self.detail_manager):
             raise OSError(f'Network in unexpected state')
 
 
@@ -50,14 +44,14 @@ def disks_ready():
     return True
 
 
-def network_ready():
+def network_ready(detail_manager):
     """Ensure that network is available and active"""
     network_snapshots = []
-    for _ in range(network_check_count):
+    for _ in range(detail_manager.network_check_count):
         network_snapshots.append(read_network_state(cmd=Command.Network.ifconfig))
-        sleep(network_check_delay)
+        sleep(detail_manager.network_check_delay)
         if not network_snapshots[0]:
-            return False  # No interfaces found, is wifi disabled?
+            return False  # No interfaces found, is Wi-Fi disabled?
     try:
         _validate_network_snapshots(network_snapshots)
     except OSError as exc:

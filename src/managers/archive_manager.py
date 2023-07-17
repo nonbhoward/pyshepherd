@@ -4,21 +4,9 @@ from hashlib import md5
 from hashlib import sha1
 
 # imports, project
-from config.config import Archives
-from config.config import BUF_SIZE
-from config.config import hash_algo
 from src.lib.lib import read_all_files
-from src.managers.archive_metadata_manager import ArchiveMetadataManager
 from src.managers.file_manager import FileManager
 from src.managers.stage_manager import StageManager
-
-# Hash generators
-if hash_algo == 'sha1':
-    hasher_also = sha1
-elif hash_algo == 'md5':
-    hasher_algo = md5
-else:
-    raise RuntimeError(f'Unknown hash_algo value set : {hash_algo}')
 
 
 class ArchiveManager:
@@ -67,20 +55,28 @@ class ArchiveManager:
         to the unstaging area from the archive. This can be thought of as a
         recycling bin where files can be evaluated before they are deleted.
     """
-    def __init__(self, debug=False):
-        self._debug = debug
+    def __init__(self, detail_manager):
+        self.detail_manager = detail_manager
+        self._debug = detail_manager.debug
         # Store metadata about each archive
-        self.archive_metadata_manager = ArchiveMetadataManager(Archives)
-        self.file_manager = FileManager()
-        self.stage_manager = StageManager()
+        self.file_manager = FileManager(detail_manager)
+        self.stage_manager = StageManager(detail_manager)
+        # Hash generators
+        if detail_manager.hash_algo == 'sha1':
+            detail_manager.hasher_algo = sha1
+        elif detail_manager.hash_algo == 'md5':
+            detail_manager.hasher_algo = md5
+        else:
+            raise RuntimeError(f'Unknown hash_algo value set : '
+                               f'{detail_manager.hash_algo}')
 
     def run(self):
-        for archive_name, paths in self.archive_metadata_manager.archives.items():
+        for archive_name, paths in self.detail_manager.archives.items():
             self.validate_archive(archive_name)
-            if self.archive_metadata_manager.read_metadata(archive_name):
+            if self.detail_manager.read_metadata(archive_name):
                 unstage_path = \
-                    self.archive_metadata_manager.path_unstage(archive_name)
-                self.unstage_duplicates(archive_name, unstage_path)
+                    self.detail_manager.path_unstage(archive_name)
+                self.unstage_archive(archive_name, unstage_path)
             else:
                 # Validate source and staging paths
                 self.validate_source_path(archive_name)
@@ -94,18 +90,21 @@ class ArchiveManager:
 
     def validate_archive(self, archive_name):
         """Verify that the archive contains no duplicate files"""
-        path_archive = self.archive_metadata_manager.path_archive(archive_name)
+        path_archive = self.detail_manager.path_archive(archive_name)
         archive_files = read_all_files(path_archive)
         if not archive_files:
             print(f'Archive is empty or path is incorrect : {path_archive}')
             exit()
-        unstage_metadata = archive_self_check(generate_hashes(archive_files))
-        self.archive_metadata_manager.write_metadata(archive_name, unstage_metadata)
+        unstage_metadata = \
+            archive_self_check(
+                generate_hashes(archive_files, self.detail_manager))
+        self.detail_manager.write_metadata(archive_name, unstage_metadata)
 
-    def unstage_duplicates(self, archive_name, unstage_path):
-        archive_duplicates = \
-            self.archive_metadata_manager.read_metadata(archive_name)
-        self.stage_manager.load_metadata(archive_duplicates, unstage_path)
+    def unstage_archive(self, archive_name, unstage_path):
+        unstage_metadata = \
+            self.detail_manager.read_metadata(archive_name)
+        self.stage_manager.load_metadata(unstage_metadata, unstage_path)
+        self.stage_manager.unstage_files(unstage_metadata, self.file_manager)
 
     def validate_source_path(self, archive_name):
         pass
@@ -179,20 +178,20 @@ def _get_archive_duplicates(archive_hashes):
     return unstage_metadata
 
 
-def generate_hashes(archive_files):
+def generate_hashes(archive_files, detail_manager):
     archive_hashes = {}
     for archive_file in archive_files:
         archive_hashes.update({
-            archive_file: generate_hash(archive_file)
+            archive_file: generate_hash(archive_file, detail_manager)
         })
     return archive_hashes
 
 
-def generate_hash(archive_file):
-    hasher = hasher_algo()
+def generate_hash(archive_file, detail_manager):
+    hasher = detail_manager.hasher_algo()
     with open(archive_file, 'rb') as af:
         while True:
-            data = af.read(BUF_SIZE)
+            data = af.read(detail_manager.BUF_SIZE)
             if not data:
                 break
             hasher.update(data)
