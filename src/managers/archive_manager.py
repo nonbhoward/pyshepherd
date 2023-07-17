@@ -107,10 +107,10 @@ class ArchiveManager:
             self.archive_metadata_manager.read_metadata(archive_name)
         self.stage_manager.load_metadata(archive_duplicates, unstage_path)
 
-    def validate_source_path(self):
+    def validate_source_path(self, archive_name):
         pass
 
-    def validate_stage_path(self):
+    def validate_stage_path(self, archive_name):
         pass
 
     def parse_source(self, source_files):

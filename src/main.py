@@ -8,7 +8,7 @@ from src.shepherd.shepherd import Shepherd
 
 shepherd = Shepherd(
     debug=DEBUG,
-    duplicate_manager=ArchiveManager,
+    archive_manager=ArchiveManager,
     system_manager=SystemManager
 )
 shepherd.run()
