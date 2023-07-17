@@ -78,7 +78,9 @@ class ArchiveManager:
         for archive_name, paths in self.archive_metadata_manager.archives.items():
             self.validate_archive(archive_name)
             if self.archive_metadata_manager.read_metadata(archive_name):
-                self.unstage_duplicates(archive_name)
+                unstage_path = \
+                    self.archive_metadata_manager.path_unstage(archive_name)
+                self.unstage_duplicates(archive_name, unstage_path)
             else:
                 # Validate source and staging paths
                 self.validate_source_path(archive_name)
@@ -100,11 +102,10 @@ class ArchiveManager:
         unstage_metadata = archive_self_check(generate_hashes(archive_files))
         self.archive_metadata_manager.write_metadata(archive_name, unstage_metadata)
 
-    def unstage_duplicates(self, archive_name):
+    def unstage_duplicates(self, archive_name, unstage_path):
         archive_duplicates = \
             self.archive_metadata_manager.read_metadata(archive_name)
-        self.stage_manager.load_metadata(archive_duplicates)
-        self.stage_manager.run('unstage')
+        self.stage_manager.load_metadata(archive_duplicates, unstage_path)
 
     def validate_source_path(self):
         pass
