@@ -2,6 +2,7 @@
 
 # imports, python
 from os import walk
+from os.path import exists
 
 
 def build_soft_link_command(path_to_target, soft_link_name):
@@ -23,5 +24,9 @@ def read_all_files(path):
     all_files = []
     for root, _, files in walk(path):
         for file in files:
-            all_files.append(root + '/' + file)
+            file_path = root + '/' + file
+            if exists(file_path):
+                all_files.append(file_path)
+            else:
+                print(f'Error, file does not exist : {file_path}')
     return all_files
