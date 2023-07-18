@@ -318,11 +318,18 @@ class ArchiveManager:
         print(f'generate_hashes')
 
         archive_hashes = {}
+        hash_count = 0
+        hash_mod = 100
+        hashes_needed = len(archive_files)
         for archive_file in archive_files:
+            if not hash_count % hash_mod:
+                print(f'Generated {hash_count} of {hashes_needed}..')
             archive_hashes.update({
                 archive_file: self.generate_hash(archive_file, detail_manager)
             })
+            hash_count += 1
         return archive_hashes
+
 
     @staticmethod
     def generate_hash(archive_file: str, detail_manager) -> str:
