@@ -72,6 +72,10 @@ class DetailManager:
         return self.config[ConfigKey.REQUIRE_NETWORK]
 
     @property
+    def skip_soft_links(self):
+        return self._config[ConfigKey.SKIP_SOFT_LINKS]
+
+    @property
     def sort_duplicate_hierarchy(self):
         return self._config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
 
@@ -132,3 +136,7 @@ class DetailManager:
 
     def update_metadata(self, archive_name, file_metadata):
         self.metadata[archive_name].update({file_metadata})
+
+    # Progress
+    def terminal_dialog_padding(self):
+        return self._config[ConfigKey.TERMINAL_DIALOG_PADDING]

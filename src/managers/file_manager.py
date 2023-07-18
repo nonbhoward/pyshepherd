@@ -16,7 +16,6 @@ class FileManager:
 
     @staticmethod
     def create_required_folders(unstage_file_details):
-        print(f'create_required_folders')
         unstage_parent_folder = \
             str(unstage_file_details[
                     'unstage_storage_details'][
@@ -35,6 +34,9 @@ class FileManager:
     @staticmethod
     def create_soft_link(soft_link_command):
         try:
+            soft_link_target = soft_link_command[3]
+            if exists(soft_link_target):
+                return  # Soft link to original already exists
             run(soft_link_command)
         except OSError as exc:
             print(f'Failed to create soft link : {soft_link_command}, {exc}')

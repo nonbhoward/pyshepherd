@@ -9,6 +9,7 @@ home = environ.get("HOME")
 config = {
 
     # MAIN VALUES BELOW
+    # This isn't used but could be useful if a debug mode was needed
     ConfigKey.DEBUG: False,
     # MAIN VALUES ABOVE
 
@@ -27,12 +28,6 @@ config = {
             ConfigKey.ARCHIVE_PATH: f'',
             ConfigKey.UNSTAGE_PATH: f''
         },
-        'archive_b': {
-            ConfigKey.SOURCE_PATH:  f'',
-            ConfigKey.STAGE_PATH:   f'',
-            ConfigKey.ARCHIVE_PATH: f'',
-            ConfigKey.UNSTAGE_PATH: f''
-        }
     },
     # Value chosen to be beyond reasonable file path lengths
     ConfigKey.FILE_NAME_LEN_MAX_VALUE: 9999,
@@ -46,8 +41,16 @@ config = {
     # The threshold over which a file will be considered large,
     #   affects the verboseness of some console output
     ConfigKey.LARGE_FILE_THRESHOLD: 100000000,
+    ConfigKey.SKIP_SOFT_LINKS: True,
     ConfigKey.SORT_DUPLICATE_HIERARCHY: True,
     # ARCHIVE MANAGER VALUES ABOVE
+
+    # LOGGER VALUES BELOW
+    # LOGGER VALUES ABOVE
+
+    # PROGRESS VALUES BELOW
+    ConfigKey.TERMINAL_DIALOG_PADDING: 7,
+    # PROGRESS VALUES ABOVE
 
     # SYSTEM MANAGER VALUES BELOW
     # Time to wait between checks of the network interfaces

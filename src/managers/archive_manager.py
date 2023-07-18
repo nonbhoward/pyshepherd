@@ -5,11 +5,13 @@
 from collections import namedtuple
 from hashlib import md5
 from hashlib import sha1
+from os import listdir
 import copy
 import sys
 
 # imports, project
-from src.lib.lib import loading_bar
+from src.enumerations import Progress
+from src.lib.lib import loading_dialog
 from src.lib.lib import read_all_files
 
 
@@ -89,6 +91,7 @@ class ArchiveManager:
         for archive_name, paths in self.detail_manager.archives.items():
 
             # Validate that there are no duplicate files in the archive
+            self.validate_unstage_path(archive_name)
             self.validate_archive(archive_name)
 
             # If there are duplicate files found in the archive, then there
@@ -118,7 +121,8 @@ class ArchiveManager:
 
         # Get the path to the archive
         path_archive = self.detail_manager.path_archive(archive_name)
-        archive_files = read_all_files(path_archive)
+        skip_soft_links = self.detail_manager.skip_soft_links
+        archive_files = read_all_files(path_archive, skip_soft_links)
 
         # If no files are found
         if not archive_files:
@@ -132,6 +136,16 @@ class ArchiveManager:
 
         # Save the metadata instructions to the detail manager
         self.detail_manager.write_metadata(archive_name, archive_metadata)
+
+    def validate_unstage_path(self, archive_name: str):
+        # TODO exit program if unstaging area is not empty at runtime
+        unstage_path = self.detail_manager.path_unstage(archive_name)
+        unstage_contents = listdir(unstage_path)
+        if unstage_contents:
+            print(f'The unstaging area : {unstage_path} is not empty')
+            print('This directory is required to be empty to prevent data loss')
+            print('Program will now exit')
+            exit()
 
     def unstage_archive(self, archive_name: str, unstage_path: str) -> None:
         """Read the populated file metadata, load it into the stage
@@ -183,8 +197,9 @@ class ArchiveManager:
         if self.detail_manager.sort_duplicate_hierarchy:
             archive_metadata = self._sort_unstage_hierarchy(archive_metadata)
         if archive_metadata:
-            print(f'Archive invalid, {len(archive_metadata)} duplicate files '
-                  f'found')
+            parent_count, children_count = _count_duplicates(archive_metadata)
+            print(f'Archive invalid, {parent_count} parent file(s) found with '
+                  f'{children_count} duplicate children')
             return archive_metadata
 
     def _get_archive_duplicates(self, archive_hashes: dict) -> dict:
@@ -220,7 +235,7 @@ class ArchiveManager:
 
                     # Compare the hashes of differing file paths
                     if a_hash == aa_hash:
-                        print(f'Duplicate file found in archive : {a_file}')
+                        print(f'Duplicate file found in archive : {aa_file}')
                         # Initialize list of duplicates
                         found_duplicates.append(aa_file)
                         if not duplicate_metadata:
@@ -328,39 +343,97 @@ class ArchiveManager:
             if not hash_count % hash_mod:
                 print(f'Generated {hash_count} of {hashes_needed}..')
             archive_hashes.update({
-                file: self.generate_hash(file, file_size, detail_manager)
+                file: self.generate_hash(
+                    file,
+                    file_size,
+                    detail_manager,
+                    hash_count,
+                    hashes_needed
+                )
             })
             hash_count += 1
         return archive_hashes
 
-    def generate_hash(self, archive_file: str, file_size: int, detail_manager) -> str:
+    def generate_hash(self,
+                      archive_file: str,
+                      file_size: int,
+                      detail_manager,
+                      hash_count: int,
+                      hashed_needed: int) -> str:
         """Given a file, generate a hash and return it
         :arg, archive_file, the path to a file
         :return, a hash string
         """
-        hasher = detail_manager.hasher_algo()
-        large_file = False
+
+        # Initialize loading bar values
         data_read_sum = 0
-        if file_size > self.detail_manager.large_file_threshold:
-            large_file = True
-            print(f'Generating hash for : {archive_file}')
+        large_file = True \
+            if file_size > self.detail_manager.large_file_threshold \
+            else False
+        progress_metadata = {
+            Progress.DATA_READ_SUM: 0,
+            Progress.DATA_SIZE: file_size,
+            Progress.PERCENTAGE_LAST_UPDATE: -100,
+            Progress.PERCENTAGE_NOW: 0
+        }
+        if large_file:
+            print(f'\nGenerating hash {hash_count + 1} of {hashed_needed}, '
+                  f'file : {archive_file}')
+
+        # Get the hash generator
+        hasher = detail_manager.hasher_algo()
+
+        # Read the file and update progress
         with open(archive_file, 'rb') as af:
-            last_update_percentage = 0
             while True:
                 data = af.read(detail_manager.buf_size)
                 data_read_sum += detail_manager.buf_size
-                if large_file:
-                    percentage, last_update_percentage = \
-                        update_loading_bar(data_read_sum / file_size, last_update_percentage, archive_file)
+
+                # Update progress metadata with file read
+                progress_metadata[
+                    Progress.DATA_READ_SUM] += detail_manager.buf_size
+                if large_file:  # Only show loading bars for large files
+                    display_loading_dialog(progress_metadata)
                 if not data:
+                    display_loading_dialog(complete=True)
                     break
                 hasher.update(data)
         return hasher.hexdigest()
 
 
-def update_loading_bar(percentage, last_update_percentage, archive_file):
-    percentage *= 100
-    if percentage > last_update_percentage + 1:
-        last_update_percentage = int(percentage)
-        sys.stdout.write(f'\r{loading_bar(int(percentage) - 1)}')
-    return percentage, last_update_percentage
+def display_loading_dialog(progress_metadata=None, complete=False):
+    if complete:  # No data remaining display final dialog
+        sys.stdout.write(f'\r100% {loading_dialog(100)}')
+        return
+
+    # Convenience variable, read the most recent percentage
+    percentage_last_update = progress_metadata[Progress.PERCENTAGE_LAST_UPDATE]
+
+    # Calculate the current percentage that has been read
+    data_read_sum = progress_metadata[Progress.DATA_READ_SUM]
+    data_size = progress_metadata[Progress.DATA_SIZE]
+    percentage_now = 100 * data_read_sum / data_size
+
+    # Determine if an update needs to be displayed
+    if percentage_last_update + 1 < percentage_now < 99:
+        percentage_last_update = percentage_now
+        sys.stdout.write(
+            f'\r{int(percentage_now)} %'
+            f'{loading_dialog(percentage_now)}')
+
+    # Update progress metadata with current state
+    progress_metadata[Progress.PERCENTAGE_LAST_UPDATE] = percentage_last_update
+    progress_metadata[Progress.PERCENTAGE_NOW] = percentage_now
+    return percentage_now, percentage_last_update
+
+
+def _count_duplicates(archive_metadata):
+    unstage_archive = archive_metadata['UNSTAGE']
+    parent_count = len(archive_metadata['UNSTAGE'])
+    children_count = 0
+
+    # Count the children duplicates
+    for _, children in unstage_archive.items():
+        children_count += len(children)
+
+    return parent_count, children_count
