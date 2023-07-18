@@ -56,6 +56,10 @@ class DetailManager:
         self._hasher_algo = value
 
     @property
+    def large_file_threshold(self):
+        return self._config[ConfigKey.LARGE_FILE_THRESHOLD]
+
+    @property
     def network_check_count(self):
         return self.config[ConfigKey.NETWORK_CHECK_COUNT]
 

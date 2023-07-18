@@ -6,8 +6,10 @@ from collections import namedtuple
 from hashlib import md5
 from hashlib import sha1
 import copy
+import sys
 
 # imports, project
+from src.lib.lib import loading_bar
 from src.lib.lib import read_all_files
 
 
@@ -308,9 +310,9 @@ class ArchiveManager:
 
         return archive_details
 
-    def generate_hashes(self, archive_files: list, detail_manager) -> dict:
+    def generate_hashes(self, archive_files: dict, detail_manager) -> dict:
         """Given a list of files, generate hashes for each
-        :arg, archive_files, a list of files
+        :arg, archive_files, a dict of file sizes keyed by file path
         :arg, detail_manager, the container for the hashing function
         :return, archive_hashes, a dictionary of hashes keyed by the file path used to
             generate them
@@ -321,27 +323,44 @@ class ArchiveManager:
         hash_count = 0
         hash_mod = 100
         hashes_needed = len(archive_files)
-        for archive_file in archive_files:
+        for file, file_details in archive_files.items():
+            file_size = file_details['st_size']
             if not hash_count % hash_mod:
                 print(f'Generated {hash_count} of {hashes_needed}..')
             archive_hashes.update({
-                archive_file: self.generate_hash(archive_file, detail_manager)
+                file: self.generate_hash(file, file_size, detail_manager)
             })
             hash_count += 1
         return archive_hashes
 
-
-    @staticmethod
-    def generate_hash(archive_file: str, detail_manager) -> str:
+    def generate_hash(self, archive_file: str, file_size: int, detail_manager) -> str:
         """Given a file, generate a hash and return it
         :arg, archive_file, the path to a file
         :return, a hash string
         """
         hasher = detail_manager.hasher_algo()
+        large_file = False
+        data_read_sum = 0
+        if file_size > self.detail_manager.large_file_threshold:
+            large_file = True
+            print(f'Generating hash for : {archive_file}')
         with open(archive_file, 'rb') as af:
+            last_update_percentage = 0
             while True:
                 data = af.read(detail_manager.buf_size)
+                data_read_sum += detail_manager.buf_size
+                if large_file:
+                    percentage, last_update_percentage = \
+                        update_loading_bar(data_read_sum / file_size, last_update_percentage, archive_file)
                 if not data:
                     break
                 hasher.update(data)
         return hasher.hexdigest()
+
+
+def update_loading_bar(percentage, last_update_percentage, archive_file):
+    percentage *= 100
+    if percentage > last_update_percentage + 1:
+        last_update_percentage = int(percentage)
+        sys.stdout.write(f'\r{loading_bar(int(percentage) - 1)}')
+    return percentage, last_update_percentage
