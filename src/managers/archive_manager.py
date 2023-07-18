@@ -392,14 +392,15 @@ class ArchiveManager:
                       file_size: int,
                       detail_manager,
                       hash_count: int,
-                      hashed_needed: int) -> str:
+                      hashed_needed: int) -> None:
         """Given a file, generate a hash and return it
-        :arg, archive_file, the path to a file
-        :arg file_size, the size of the file
-        :arg detail_manager, access to configuration and helper functions
-        :arg hash_count, the number of the hash being processed
-        :arg hashed_needed, the total number of hashes to be processed
-        :return, a hash string
+
+        :param archive_file, the path to a file
+        :param file_size, the size of the file
+        :param detail_manager, access to configuration and helper functions
+        :param hash_count, the number of the hash being processed
+        :param hashed_needed, the total number of hashes to be processed
+        :return a hash string
         """
 
         # Initialize loading bar values
@@ -409,7 +410,7 @@ class ArchiveManager:
             else False
 
         # Metadata for the loading bar
-        progress_bar_increment = self.detail_manager.progress_bar_increment
+        progress_bar_increment = self.detail_manager.progress_bar_increment()
         progress_metadata = {
             Progress.DATA_READ_SUM: 0,
             Progress.DATA_SIZE: file_size,
