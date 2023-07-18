@@ -7,6 +7,7 @@ from os.path import exists
 from os.path import islink
 from src.enumerations import Command
 import shutil
+import sys
 
 
 def build_soft_link_command(path_to_target: str, soft_link_name: str) -> list:
@@ -49,14 +50,12 @@ def read_all_files(path: str, skip_soft_links: bool) -> dict:
     """
     all_files = {}
     for root, _, files in walk(path):
-        print(f'Reading files in {root}')
+        sys.stdout.write(f'\rReading files in {root}')
         for file in files:
             file_path = root + '/' + file
             if exists(file_path):
                 if skip_soft_links and islink(file_path):
-                    print(f'Skipping soft-link {file_path} ')
-                    print('Optionally disable this behavior in the '
-                          'configuration file')
+                    # print(f'Skipping soft-link {file_path} ')
                     continue
                 file_stat = stat(file_path)
                 all_files[file_path] = {
