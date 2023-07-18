@@ -23,6 +23,7 @@ def convert_filepath_to_soft_link_name(file_path):
 def read_all_files(path):
     all_files = []
     for root, _, files in walk(path):
+        print(f'Reading files in {root}')
         for file in files:
             file_path = root + '/' + file
             if exists(file_path):

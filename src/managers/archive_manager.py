@@ -58,6 +58,7 @@ class ArchiveManager:
         recycling bin where files can be evaluated before they are deleted.
     """
     def __init__(self, detail_manager, file_manager, stage_manager):
+        print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
         self._debug = detail_manager.debug
 
@@ -81,6 +82,7 @@ class ArchiveManager:
             parsed. The archive is valid when it contains no duplicate
             files.
         """
+        print(f'Running {self.__class__.__name__}')
         # Iterate through each archive and perform management actions
         for archive_name, paths in self.detail_manager.archives.items():
 
@@ -110,6 +112,7 @@ class ArchiveManager:
         :arg, archive_name: a string that allows the archive manager to know
             which archive is being validated.
         """
+        print(f'validate_archive')
 
         # Get the path to the archive
         path_archive = self.detail_manager.path_archive(archive_name)
@@ -136,24 +139,31 @@ class ArchiveManager:
         :arg, unstage_path: a string that points to the unstaging parent
             folder, which is where unstaged files will be moved
         """
+        print(f'unstage_archive')
+
         archive_metadata = \
             self.detail_manager.read_metadata(archive_name)
         self.stage_manager.load_metadata(archive_metadata, unstage_path)
         self.stage_manager.unstage_files(archive_metadata, self.file_manager)
 
     def validate_source_path(self, archive_name):
+        print(f'validate_source_path')
         pass
 
     def validate_stage_path(self, archive_name):
+        print(f'validate_stage_path')
         pass
 
     def parse_source(self, source_files):
+        print(f'parse_source')
         return ''
 
     def stage_unique(self, source_files):
+        print(f'stage_unique')
         pass
 
     def read_source(self, paths):
+        print(f'read_source')
         path_source = self.detail_manager.path_source
         return ''
 
@@ -165,6 +175,8 @@ class ArchiveManager:
             duplicate files with empty dictionaries initialized for each
             file
         """
+        print(f'archive_self_check')
+
         archive_metadata = self._get_archive_duplicates(archive_hashes)
         if self.detail_manager.sort_duplicate_hierarchy:
             archive_metadata = self._sort_unstage_hierarchy(archive_metadata)
@@ -180,6 +192,8 @@ class ArchiveManager:
         :returns, archive_metadata: data about the duplicate files that will help
             to relocate them out of the archive
         """
+        print(f'_get_archive_duplicates')
+
         archive_metadata = self.detail_manager.archive_metadata_empty
         archive_hashes_dc = copy.deepcopy(archive_hashes)
         found_duplicates = []
@@ -239,6 +253,8 @@ class ArchiveManager:
         :arg, archive_details: metadata about the archive duplicates,
             containing empty containers for each duplicate file
         """
+        print(f'_sort_unstage_hierarchy')
+
         unstage = self.detail_manager.read_unstage(archive_details)
         unstage_dc = copy.deepcopy(unstage)
         for parent_file, child_files in unstage_dc.items():
@@ -299,6 +315,8 @@ class ArchiveManager:
         :return, archive_hashes, a dictionary of hashes keyed by the file path used to
             generate them
         """
+        print(f'generate_hashes')
+
         archive_hashes = {}
         for archive_file in archive_files:
             archive_hashes.update({

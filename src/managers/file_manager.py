@@ -11,10 +11,12 @@ from subprocess import run
 class FileManager:
 
     def __init__(self, detail_manager):
+        print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
 
     @staticmethod
     def create_required_folders(unstage_file_details):
+        print(f'create_required_folders')
         unstage_parent_folder = \
             str(unstage_file_details[
                     'unstage_storage_details'][

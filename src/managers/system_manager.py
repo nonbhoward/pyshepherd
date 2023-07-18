@@ -12,21 +12,25 @@ from src.enumerations import Network
 
 class SystemManager:
     def __init__(self, detail_manager):
+        print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
         self._debug = detail_manager.debug
         self._network_connected = None
 
     def run(self):
+        print(f'Running {self.__class__.__name__}')
         self.disk_check()
         if self.detail_manager.require_network:
             self.network_check()
 
     @staticmethod
     def disk_check():
+        print(f'disk_check')
         if not disks_ready():
             raise OSError(f'Disks in unexpected state')
 
     def network_check(self):
+        print(f'network_check')
         if not network_ready(self.detail_manager):
             raise OSError(f'Network in unexpected state')
 

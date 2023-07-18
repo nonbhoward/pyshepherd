@@ -14,18 +14,22 @@ from src.enumerations import ArchiveType
 class StageManager:
 
     def __init__(self, detail_manager):
+        print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
 
     def load_metadata(self, archive_metadata, unstage_path):
+        print(f'load_metadata')
         archive_type = self.detail_manager.read_metadata_type(archive_metadata)
         if archive_type == ArchiveType.ARCHIVE:
             self.populate_unstage_metadata(archive_metadata, unstage_path)
 
     def populate_unstage_metadata(self, archive_metadata, unstage_path):
+        print(f'populate_unstage_metadata')
         self._update_with_unstaging_destinations(archive_metadata, unstage_path)
         self._update_with_soft_links(archive_metadata, unstage_path)
 
     def _update_with_unstaging_destinations(self, archive_metadata, unstage_path):
+        print(f'_update_with_unstaging_destinations')
         unstage_metadata_dc = copy.deepcopy(
             self.detail_manager.read_unstage(archive_metadata)
         )
@@ -43,6 +47,7 @@ class StageManager:
 
     @staticmethod
     def _update_with_soft_links(archive_metadata, unstage_path):
+        print(f'_update_with_soft_links')
         unstage_metadata_dc = copy.deepcopy(archive_metadata)
         for original_file_dc, unstage_details_dc in unstage_metadata_dc['UNSTAGE'].items():
             for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
@@ -60,6 +65,7 @@ class StageManager:
 
     @staticmethod
     def unstage_files(archive_metadata, file_manager):
+        print(f'unstage_files')
         unstage_metadata = archive_metadata['UNSTAGE']
         for original_file, unstage_details in unstage_metadata.items():
             for unstage_file, unstage_file_details in unstage_details.items():

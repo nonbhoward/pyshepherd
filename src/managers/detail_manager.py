@@ -12,6 +12,7 @@ from src.enumerations import MetadataKey
 class DetailManager:
 
     def __init__(self, config):
+        print(f'Init {self.__class__.__name__}')
         self._config = config
         self._hasher_algo = None
         self._mpt_archives = MappingProxyType(self.archives)
