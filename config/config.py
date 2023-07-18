@@ -43,6 +43,9 @@ config = {
     # This feature will compare the original and duplicate files, sorting them
     #   alphabetically, and declares the "alphabetically first" file as the
     #   original. This is obviously not necessary, so it can be skipped.
+    # The threshold over which a file will be considered large,
+    #   affects the verboseness of some console output
+    ConfigKey.LARGE_FILE_THRESHOLD: 100000000,
     ConfigKey.SORT_DUPLICATE_HIERARCHY: True,
     # ARCHIVE MANAGER VALUES ABOVE
 
