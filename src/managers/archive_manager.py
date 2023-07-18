@@ -410,7 +410,7 @@ class ArchiveManager:
             else False
 
         # Metadata for the loading bar
-        progress_bar_increment = self.detail_manager.progress_bar_increment()
+        progress_bar_increment = self.detail_manager.progress_bar_increment
         progress_metadata = {
             Progress.DATA_READ_SUM: 0,
             Progress.DATA_SIZE: file_size,
@@ -441,7 +441,8 @@ class ArchiveManager:
                 if large_file:
                     display_loading_dialog(progress_metadata)
                 if not data:
-                    display_loading_dialog(complete=True)
+                    if large_file:
+                        display_loading_dialog(complete=True)
                     break
                 hasher.update(data)
         return hasher.hexdigest()

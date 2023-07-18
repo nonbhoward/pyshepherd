@@ -141,6 +141,7 @@ class DetailManager:
         self.metadata[archive_name].update({file_metadata})
 
     # Progress
+    @property
     def progress_bar_increment(self):
         return self._config[ConfigKey.PROGRESS_BAR_INCREMENT]
 
