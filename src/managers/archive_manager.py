@@ -2,9 +2,10 @@
 #   and the files themselves
 
 # imports, python
-import copy
+from collections import namedtuple
 from hashlib import md5
 from hashlib import sha1
+import copy
 
 # imports, project
 from src.lib.lib import read_all_files
@@ -165,6 +166,8 @@ class ArchiveManager:
             file
         """
         archive_metadata = self._get_archive_duplicates(archive_hashes)
+        if self.detail_manager.sort_duplicate_hierarchy:
+            archive_metadata = self._sort_unstage_hierarchy(archive_metadata)
         if archive_metadata:
             print(f'Archive invalid, {len(archive_metadata)} duplicate files '
                   f'found')
@@ -177,7 +180,7 @@ class ArchiveManager:
         :returns, archive_metadata: data about the duplicate files that will help
             to relocate them out of the archive
         """
-        archive_metadata = self.detail_manager.unstage_metadata_empty
+        archive_metadata = self.detail_manager.archive_metadata_empty
         archive_hashes_dc = copy.deepcopy(archive_hashes)
         found_duplicates = []
         # While dictionary has files
@@ -205,10 +208,14 @@ class ArchiveManager:
                         # Initialize list of duplicates
                         found_duplicates.append(aa_file)
                         if not duplicate_metadata:
-                            duplicate_metadata = {aa_file: {}}
+                            duplicate_metadata = \
+                                self.detail_manager.duplicate_metadata_init(aa_file)
                         else:
-                            # Update list of duplicates
-                            duplicate_metadata.update({aa_file: {}})
+                            # Update collection of duplicates with new init
+                            self.detail_manager.duplicate_metadata_add_new_entry(
+                                duplicate_metadata,
+                                aa_file
+                            )
 
                         self.detail_manager.archive_metadata_update(
                             archive_metadata,
@@ -221,6 +228,69 @@ class ArchiveManager:
                 break  # Force restart of the for loop with new dict
 
         return archive_metadata
+
+    def _sort_unstage_hierarchy(self, archive_details):
+        """Extracts the original file and duplicate files, reads their
+            length, and declares the shortest file name to be
+            the original. If more than one file matches the length of the
+            shortest file, then sort them alphabetically and declare the
+            'first' file to be the new parent. This is obviously not
+            necessary, so it can be skipped in the configuration.
+        :arg, archive_details: metadata about the archive duplicates,
+            containing empty containers for each duplicate file
+        """
+        unstage = self.detail_manager.read_unstage(archive_details)
+        unstage_dc = copy.deepcopy(unstage)
+        for parent_file, child_files in unstage_dc.items():
+
+            # Collect the lengths of each file name
+            file_name_data = []
+            file_name_datum = namedtuple('file_name_datum', ['index', 'length', 'name'])
+            # Collect data for each file
+            for idx, file in enumerate([parent_file, * list(child_files)]):
+                file_name_data.append(file_name_datum(
+                    index=idx,
+                    length=len(file),
+                    name=file)
+                )
+
+            # Get the shortest file length and its index
+            # Initial value beyond reasonable file lengths
+            shortest_len = self.detail_manager.file_name_len_max_value
+            shortest_idx = None
+            file_lengths = []
+            for file_name_datum in file_name_data:
+                file_lengths.append(file_name_datum.length)
+                if file_name_datum.length < shortest_len:
+                    shortest_idx = file_name_datum.index
+                    shortest_len = file_name_datum.length
+
+            if shortest_len == self.detail_manager.file_name_len_max_value:
+                raise Exception(f'No file lengths processed')
+
+            # Check if multiple files match the shortest length
+            shortest_length = file_name_data[shortest_idx].length
+            shortest_count = file_lengths.count(shortest_length)
+
+            # Check if multiple files were the same length
+            if shortest_count > 1:  # Two file lengths match, sort alphabetically instead
+                # Sort alphabetically
+                files_sorted = sorted([parent_file, * list(child_files)])
+            else:
+                # Sort by shortest file name
+                files_sorted = []
+                for sorted_file_length in sorted(file_lengths):
+                    for file_name_datum in file_name_data:
+                        if file_name_datum.length == sorted_file_length:
+                            files_sorted.append(file_name_datum.name)
+            del unstage[parent_file]
+
+            # Update the dictionary with the sorted files
+            unstage[files_sorted[0]] = {
+                file: {} for file in files_sorted[1:]
+            }
+
+        return archive_details
 
     def generate_hashes(self, archive_files: list, detail_manager) -> dict:
         """Given a list of files, generate hashes for each
@@ -245,7 +315,7 @@ class ArchiveManager:
         hasher = detail_manager.hasher_algo()
         with open(archive_file, 'rb') as af:
             while True:
-                data = af.read(detail_manager.BUF_SIZE)
+                data = af.read(detail_manager.buf_size)
                 if not data:
                     break
                 hasher.update(data)

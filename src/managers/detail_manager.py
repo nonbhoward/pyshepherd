@@ -5,6 +5,8 @@ from types import MappingProxyType
 
 # imports, project
 from src.enumerations import ArchiveType
+from src.enumerations import ConfigKey
+from src.enumerations import MetadataKey
 
 
 class DetailManager:
@@ -15,13 +17,14 @@ class DetailManager:
         self._mpt_archives = MappingProxyType(self.archives)
         self.metadata = {}
 
+    # Config
     @property
     def archives(self):
-        return dict(self.config['Archives'])
+        return dict(self.config[ConfigKey.ARCHIVES])
 
     @property
-    def BUF_SIZE(self):
-        return self.config['BUF_SIZE']
+    def buf_size(self):
+        return self.config[ConfigKey.BUF_SIZE]
 
     @property
     def config(self):
@@ -33,11 +36,15 @@ class DetailManager:
 
     @property
     def debug(self):
-        return self.config['DEBUG']
+        return self.config[ConfigKey.DEBUG]
+
+    @property
+    def file_name_len_max_value(self):
+        return self._config[ConfigKey.FILE_NAME_LEN_MAX_VALUE]
 
     @property
     def hash_algo(self):
-        return self.config['hash_algo']
+        return self.config[ConfigKey.HASH_ALGO]
 
     @property
     def hasher_algo(self):
@@ -49,42 +56,59 @@ class DetailManager:
 
     @property
     def network_check_count(self):
-        return self.config['network_check_count']
+        return self.config[ConfigKey.NETWORK_CHECK_COUNT]
 
     @property
     def network_check_delay(self):
-        return self.config['network_check_delay']
+        return self.config[ConfigKey.NETWORK_CHECK_DELAY]
 
     @property
     def require_network(self):
-        return self.config['require_network']
+        return self.config[ConfigKey.REQUIRE_NETWORK]
 
-    # Archives functions
+    @property
+    def sort_duplicate_hierarchy(self):
+        return self._config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
+
+    # Archive
     def path_archive(self, archive_name):
-        return self.archives[archive_name]['archive_path']
+        return self.archives[archive_name][ConfigKey.ARCHIVE_PATH]
 
     def path_source(self, archive_name):
-        return self.archives[archive_name]['source_path']
+        return self.archives[archive_name][ConfigKey.SOURCE_PATH]
 
     def path_stage(self, archive_name):
-        return self.archives[archive_name]['stage_path']
+        return self.archives[archive_name][ConfigKey.STAGE_PATH]
 
     def path_unstage(self, archive_name):
-        return self.archives[archive_name]['unstage_path']
+        return self.archives[archive_name][ConfigKey.UNSTAGE_PATH]
 
-    # Metadata functions
+    # Metadata
     @property
-    def unstage_metadata_empty(self):
-        unstage_metadata_empty = {
-            'type': ArchiveType.archive,
-            'unstage': {}
+    def archive_metadata_empty(self):
+        archive_metadata_empty = {
+            MetadataKey.TYPE: ArchiveType.ARCHIVE,
+            MetadataKey.UNSTAGE: {}
         }
-        return unstage_metadata_empty
+        return archive_metadata_empty
 
     @staticmethod
     def archive_metadata_update(archive_metadata, file, metadata):
-        archive_metadata['unstage'].update({
+        archive_metadata[MetadataKey.UNSTAGE].update({
             file: metadata
+        })
+
+    @staticmethod
+    def duplicate_metadata_init(file):
+        duplicate_metadata_empty = {
+            file: {}
+        }
+        return duplicate_metadata_empty
+
+    @staticmethod
+    def duplicate_metadata_add_new_entry(duplicate_metadata, file):
+        duplicate_metadata.update({
+            file: {}
         })
 
     def read_metadata(self, archive_name):
@@ -92,7 +116,11 @@ class DetailManager:
 
     @staticmethod
     def read_metadata_type(unstage_metadata):
-        return unstage_metadata['type']
+        return unstage_metadata[MetadataKey.TYPE]
+
+    @staticmethod
+    def read_unstage(archive_metadata):
+        return archive_metadata[MetadataKey.UNSTAGE]
 
     def write_metadata(self, archive_name, file_metadata):
         self.metadata[archive_name] = file_metadata

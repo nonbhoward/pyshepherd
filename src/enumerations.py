@@ -8,8 +8,8 @@ user = os.environ.get('USER')
 
 
 class ArchiveType:
-    archive = 'archive'
-    source = 'source'
+    ARCHIVE = 'ARCHIVE'
+    SOURCE = 'SOURCE'
 
 
 class Command:
@@ -32,6 +32,24 @@ class Command:
         }
 
 
+class ConfigKey:
+    # Parent Keys
+    DEBUG = 'DEBUG'
+    BUF_SIZE = 'BUF_SIZE'
+    ARCHIVES = 'ARCHIVES'
+    FILE_NAME_LEN_MAX_VALUE = 'FILE_NAME_LEN_MAX_VALUE'
+    HASH_ALGO = 'HASH_ALGO'
+    SORT_DUPLICATE_HIERARCHY = 'SORT_DUPLICATE_HIERARCHY'
+    NETWORK_CHECK_DELAY = 'NETWORK_CHECK_DELAY'
+    NETWORK_CHECK_COUNT = 'NETWORK_CHECK_COUNT'
+    REQUIRE_NETWORK = 'REQUIRE_NETWORK'
+    # Child Keys, Archives
+    SOURCE_PATH = 'SOURCE_PATH'
+    STAGE_PATH = 'STAGE_PATH'
+    ARCHIVE_PATH = 'ARCHIVE_PATH'
+    UNSTAGE_PATH = 'UNSTAGE_PATH'
+
+
 class Disk:
     class Dev:
         # Define mount point requirements
@@ -41,6 +59,12 @@ class Disk:
         skip = [
             'tmpfs'
         ]
+
+
+class MetadataKey:
+    DUPLICATES = 'DUPLICATES'
+    TYPE = 'TYPE'
+    UNSTAGE = 'UNSTAGE'
 
 
 class Network:
