@@ -1,5 +1,7 @@
 # Files
 # Folders
 .idea
+env
 # Patterns
 *.egg-info
+*.pyc
