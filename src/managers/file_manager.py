@@ -3,7 +3,6 @@
 # imports python
 from os import mkdir
 from os.path import exists
-from shutil import copy
 from shutil import move
 from subprocess import run
 
@@ -15,7 +14,12 @@ class FileManager:
         self.detail_manager = detail_manager
 
     @staticmethod
-    def create_required_folders(unstage_file_details):
+    def create_required_folders(unstage_file_details: dict) -> None:
+        """Recursively create all parent folders up to and including the parent
+            directory being requested
+
+        :param unstage_file_details: metadata used to create the folders
+        """
         unstage_parent_folder = \
             str(unstage_file_details[
                     'unstage_storage_details'][
@@ -32,7 +36,11 @@ class FileManager:
                     raise exc
 
     @staticmethod
-    def create_soft_link(soft_link_command):
+    def create_soft_link(soft_link_command: list) -> None:
+        """Create a soft link, aborts if soft link already exists
+
+        :param soft_link_command: the command to create the soft link
+        """
         try:
             soft_link_target = soft_link_command[3]
             if exists(soft_link_target):
@@ -42,22 +50,26 @@ class FileManager:
             print(f'Failed to create soft link : {soft_link_command}, {exc}')
             raise exc
 
-    def move_duplicate_file(self, unstage_file, unstage_file_details):
+    def move_duplicate_file(self,
+                            unstage_file: str,
+                            unstage_file_details: dict) -> None:
+        """Move a file
+
+        :param unstage_file: file source
+        :param unstage_file_details: file destination details
+        """
         unstage_file_dst = unstage_file_details['unstage_storage_details']['unstage_file_destination']
         self.move_file(
             src=unstage_file,
             dst=unstage_file_dst
         )
 
-    def copy_file(self, src, dst):
-        self.validate_paths(src, dst)
-        try:
-            copy(src=src, dst=dst)
-        except OSError as exc:
-            print(f'Failed to move file : {src} > {dst}')
-            raise exc
+    def move_file(self, src: str, dst: str) -> None:
+        """Validate the paths and move the file
 
-    def move_file(self, src, dst):
+        :param src: the source file
+        :param dst: the destination file
+        """
         self.validate_paths(src, dst)
         try:
             move(src=src, dst=dst)
@@ -66,7 +78,12 @@ class FileManager:
             raise exc
 
     @staticmethod
-    def validate_paths(src, dst):
+    def validate_paths(src: str, dst: str) -> None:
+        """Validate paths exist
+
+        :param src: a path to validate
+        :param dst: a path to validate
+        """
         if not exists(src):
             raise OSError(f'Src not exist : {src}')
         dst = '/'.join(dst.split('/')[:-1])

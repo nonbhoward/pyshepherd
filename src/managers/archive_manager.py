@@ -23,38 +23,55 @@ class ArchiveManager:
         The key locations (in order of timeline) are :
             "source file location" called "source"
             "staging file location" called "stage"
+            "graveyard location" called "graveyard"
             "final file destination" called "archive"
             "unstaging file location" called "unstage"
+        Files can only move in the following manner :
+            source ~> stage
+            source ~> graveyard
+            archive ~> unstage
 
-    Every file will first start as a source file, it will be hashed, and that
-        hash will be compared against every hash in the archive.
+    # TODO This feature is not operational
+    Source Files
+        "New" files that are introduced to the system must first be compared
+            against every file in the archive. If the source file is found to
+            be unique when compared to the archive, then it will be moved to
+            the staging area. If that file is not found to be unique, then it
+            will be moved to the graveyard.
 
-    Situation A for a source file :
+    Situation A for a source file (source ~> stage) :
         If the hash shows that the file is not a duplicate of an already
         archived file, then the source file will be moved to the staging area.
         It is now a staged file. The user (or an automation script) can then
             choose where to put that file in the archive, as it has been shown
             to be unique.
 
-    Situation B for a source file :
+    Situation B for a source file (source ~> graveyard) :
         If the hash shows that the file is a duplicate of an already archived
-            file, then the source file will be moved to a "duplicates" area,
-            where there will also be a soft-link generated to the duplicate
-            file in the archive. The user (or an automation script) can then
-            choose whether to delete that file, as it already exists in
-            the archive.
+            file, then the source file will be moved to a "duplicates" area
+            called the graveyard where there will also be a soft-link
+            generated to the duplicate file in the archive. The user
+            (or an automation script) can then choose whether to delete that
+            file, as it already exists in the archive.
 
-    The staged files are files nominated for inclusion in the archive, they
-        have been shown to be unique, and do not exist in the archive.
+    Staged Files
+        The staged files are files nominated for inclusion in the archive, they
+            have been shown to be unique, and do not exist in the archive.
 
-    The archive is a collection of unique files.
+    Graveyard Files
+        Files that were in the source, but were already found to have duplicates
+            in the archive, they are not unique files.
+
+    Archive Files
+        The archive is a collection of unique files.
 
     This manager has the ability to manage multiple archives, each archive
         will need to have a defined path to :
             1. The archive itself
-            2. The staging area
+            2. The staging area (MUST BE EMPTY AT RUNTIME)
+            3. A graveyard area (MUST BE EMPTY AT RUNTIME)
             3. The source file location
-            4. The un-staging area
+            4. The un-staging area (MUST BE EMPTY AT RUNTIME)
 
     Inevitably, errors will be made when including files in the archive, and
         when a file needs to be removed from the archive, it will be removed
@@ -62,15 +79,22 @@ class ArchiveManager:
         recycling bin where files can be evaluated before they are deleted.
     """
     def __init__(self, detail_manager, file_manager, stage_manager):
+        """Initialize helper classes and pre-runtime configuration
+
+        :param detail_manager: fetcher and setter of objects in data structure
+        :param file_manager: writer, mover, and creator of files/folders
+        :param stage_manager: reads and evaluates the archive metadata, uses
+            the file_handler to handle files
+        """
         print(f'Init {self.__class__.__name__}')
+
+        # Initialize and store helper classes
         self.detail_manager = detail_manager
         self._debug = detail_manager.debug
-
-        # Store metadata about each archive
         self.file_manager = file_manager(detail_manager)
         self.stage_manager = stage_manager(detail_manager)
 
-        # Setup hash generator
+        # Setup hash generator, selection defined in config
         if detail_manager.hash_algo == 'sha1':
             detail_manager.hasher_algo = sha1
         elif detail_manager.hash_algo == 'md5':
@@ -80,30 +104,40 @@ class ArchiveManager:
                                f'{detail_manager.hash_algo}')
 
     def run(self) -> None:
-        """The primary actions of the archive manager. If the archive is
-            found to be invalid then the source will not be parsed.
-            If the archive is found to be valid, then the source will be
-            parsed. The archive is valid when it contains no duplicate
-            files.
+        """
+        The primary actions of the archive manager. If the archive is
+            found to be invalid for any reason then the source will not
+            be parsed and instead the archive itself will be parsed and
+            staged.
+        If the archive is found to be valid, then the source will be
+            parsed and staged.
+        The archive is valid when it contains no duplicate files.
         """
         print(f'Running {self.__class__.__name__}')
-        # Iterate through each archive and perform management actions
+
+        # Iterate through each archive
         for archive_name, paths in self.detail_manager.archives.items():
 
-            # Validate that there are no duplicate files in the archive
-            self.validate_unstage_path(archive_name)
+            # Validate staging, unstaging, and graveyard areas
+            #   If those locations are not empty this will fail
+            self.validate_path_empty(archive_name, 'UNSTAGE')
+            self.validate_path_empty(archive_name, 'STAGE')
+            self.validate_path_empty(archive_name, 'GRAVEYARD')
+
+            # Validate there are no duplicate files in the archive
             self.validate_archive(archive_name)
 
-            # If there are duplicate files found in the archive, then there
-            #   will be metadata. These duplicate files will trigger unstaging
-            #   of those files to begin
+            # If there are duplicate files found in the archive, begin the
+            #   unstaging process, the source will not be evaluated this run
             if self.detail_manager.read_metadata(archive_name):
                 unstage_path = self.detail_manager.path_unstage(archive_name)
                 self.unstage_archive(archive_name, unstage_path)
-            else:  # The archive is valid, process the source for staging
+            else:
+                # TODO features below are placeholder functions, at the moment
+                #   this program only evaluates the archive
+                # The archive is valid, parse the source for staging
                 # Validate source and staging paths
                 self.validate_source_path(archive_name)
-                self.validate_stage_path(archive_name)
 
                 # Read files from the source path
                 source_filedata = self.parse_source(self.read_source(archive_name))
@@ -112,8 +146,8 @@ class ArchiveManager:
                 self.stage_unique(source_filedata)
 
     def validate_archive(self, archive_name: str) -> None:
-        """Validate the archive by reading file metadata. Unstage the
-            duplicate files.
+        """Validate the archive by reading file metadata. Populate the file
+            metadata and resume
         :arg, archive_name: a string that allows the archive manager to know
             which archive is being validated.
         """
@@ -137,12 +171,21 @@ class ArchiveManager:
         # Save the metadata instructions to the detail manager
         self.detail_manager.write_metadata(archive_name, archive_metadata)
 
-    def validate_unstage_path(self, archive_name: str):
-        # TODO exit program if unstaging area is not empty at runtime
-        unstage_path = self.detail_manager.path_unstage(archive_name)
-        unstage_contents = listdir(unstage_path)
-        if unstage_contents:
-            print(f'The unstaging area : {unstage_path} is not empty')
+    def validate_path_empty(self, archive_name: str, path_label: str):
+
+        # Exit program if path is not empty
+        if path_label == 'GRAVEYARD':
+            path_to_validate = self.detail_manager.path_graveyard(archive_name)
+        elif path_label == 'STAGE':
+            path_to_validate = self.detail_manager.path_stage(archive_name)
+        elif path_label == 'UNSTAGE':
+            path_to_validate = self.detail_manager.path_unstage(archive_name)
+        else:
+            print(f'Invalid path label {path_label}')
+            exit()
+        path_contents = listdir(path_to_validate)
+        if path_contents:
+            print(f'The {path_label} area : {path_to_validate} is not empty')
             print('This directory is required to be empty to prevent data loss')
             print('Program will now exit')
             exit()
@@ -163,25 +206,16 @@ class ArchiveManager:
         self.stage_manager.unstage_files(archive_metadata, self.file_manager)
 
     def validate_source_path(self, archive_name):
-        print(f'validate_source_path')
-        pass
-
-    def validate_stage_path(self, archive_name):
-        print(f'validate_stage_path')
-        pass
+        print(f'validate_source_path')  # TODO
 
     def parse_source(self, source_files):
-        print(f'parse_source')
-        return ''
+        print(f'parse_source')  # TODO
 
     def stage_unique(self, source_files):
-        print(f'stage_unique')
-        pass
+        print(f'stage_unique')  # TODO
 
     def read_source(self, paths):
-        print(f'read_source')
-        path_source = self.detail_manager.path_source
-        return ''
+        print(f'read_source')  # TODO
 
     def archive_self_check(self, archive_hashes: dict):
         """Process the list of files and included hashes in order to find duplicate
@@ -278,7 +312,8 @@ class ArchiveManager:
 
             # Collect the lengths of each file name
             file_name_data = []
-            file_name_datum = namedtuple('file_name_datum', ['index', 'length', 'name'])
+            file_name_datum = \
+                namedtuple('file_name_datum', ['index', 'length', 'name'])
             # Collect data for each file
             for idx, file in enumerate([parent_file, * list(child_files)]):
                 file_name_data.append(file_name_datum(
@@ -329,8 +364,6 @@ class ArchiveManager:
         """Given a list of files, generate hashes for each
         :arg, archive_files, a dict of file sizes keyed by file path
         :arg, detail_manager, the container for the hashing function
-        :return, archive_hashes, a dictionary of hashes keyed by the file path used to
-            generate them
         """
         print(f'generate_hashes')
 
@@ -362,6 +395,10 @@ class ArchiveManager:
                       hashed_needed: int) -> str:
         """Given a file, generate a hash and return it
         :arg, archive_file, the path to a file
+        :arg file_size, the size of the file
+        :arg detail_manager, access to configuration and helper functions
+        :arg hash_count, the number of the hash being processed
+        :arg hashed_needed, the total number of hashes to be processed
         :return, a hash string
         """
 
@@ -370,12 +407,18 @@ class ArchiveManager:
         large_file = True \
             if file_size > self.detail_manager.large_file_threshold \
             else False
+
+        # Metadata for the loading bar
+        progress_bar_increment = self.detail_manager.progress_bar_increment
         progress_metadata = {
             Progress.DATA_READ_SUM: 0,
             Progress.DATA_SIZE: file_size,
             Progress.PERCENTAGE_LAST_UPDATE: -100,
-            Progress.PERCENTAGE_NOW: 0
+            Progress.PERCENTAGE_NOW: 0,
+            Progress.UPDATE_INCREMENT: progress_bar_increment,
         }
+
+        # Only display messages for large files
         if large_file:
             print(f'\nGenerating hash {hash_count + 1} of {hashed_needed}, '
                   f'file : {archive_file}')
@@ -392,7 +435,9 @@ class ArchiveManager:
                 # Update progress metadata with file read
                 progress_metadata[
                     Progress.DATA_READ_SUM] += detail_manager.buf_size
-                if large_file:  # Only show loading bars for large files
+
+                # Only show loading bars for large files
+                if large_file:
                     display_loading_dialog(progress_metadata)
                 if not data:
                     display_loading_dialog(complete=True)
@@ -402,7 +447,17 @@ class ArchiveManager:
 
 
 def display_loading_dialog(progress_metadata=None, complete=False):
-    if complete:  # No data remaining display final dialog
+    """Print a loading bar to the console for large files
+
+    :param progress_metadata: tells the progress bar what to display
+    :param complete: a flag that indicates there is no more data to be read
+    :return: percentage_now, percentage_last_update, the most recent
+        completion percentage and the current completion percentage, their
+        relative values are used to determine when to udpate the loading bar
+    """
+
+    # No data remaining, display final dialog
+    if complete:
         sys.stdout.write(f'\r100% {loading_dialog(100)}')
         return
 
@@ -415,7 +470,8 @@ def display_loading_dialog(progress_metadata=None, complete=False):
     percentage_now = 100 * data_read_sum / data_size
 
     # Determine if an update needs to be displayed
-    if percentage_last_update + 1 < percentage_now < 99:
+    increment = progress_metadata[Progress.UPDATE_INCREMENT]
+    if percentage_last_update + increment < percentage_now < 99:
         percentage_last_update = percentage_now
         sys.stdout.write(
             f'\r{int(percentage_now)} %'
@@ -428,6 +484,13 @@ def display_loading_dialog(progress_metadata=None, complete=False):
 
 
 def _count_duplicates(archive_metadata):
+    """Count duplicate parents and children
+
+    :param archive_metadata: the archive metadata containing details about
+        duplicate files
+    :return: parent_count, children_count, the number of parent duplicate files
+        and the number of children duplicates
+    """
     unstage_archive = archive_metadata['UNSTAGE']
     parent_count = len(archive_metadata['UNSTAGE'])
     children_count = 0

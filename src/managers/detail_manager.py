@@ -1,4 +1,4 @@
-# Avoid hassles managing dictionary details in one location
+# Manage details with attributes instead of manually manipulating collections
 
 # imports, python
 from types import MappingProxyType
@@ -83,6 +83,9 @@ class DetailManager:
     def path_archive(self, archive_name):
         return self.archives[archive_name][ConfigKey.ARCHIVE_PATH]
 
+    def path_graveyard(self, archive_name):
+        return self.archives[archive_name][ConfigKey.GRAVEYARD_PATH]
+
     def path_source(self, archive_name):
         return self.archives[archive_name][ConfigKey.SOURCE_PATH]
 
@@ -138,5 +141,8 @@ class DetailManager:
         self.metadata[archive_name].update({file_metadata})
 
     # Progress
+    def progress_bar_increment(self):
+        return self._config[ConfigKey.PROGRESS_BAR_INCREMENT]
+
     def terminal_dialog_padding(self):
         return self._config[ConfigKey.TERMINAL_DIALOG_PADDING]

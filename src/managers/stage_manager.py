@@ -14,21 +14,45 @@ from src.enumerations import ArchiveType
 class StageManager:
 
     def __init__(self, detail_manager):
+        """Manage metadata related to staging and unstaging files
+
+        :param detail_manager: access to configuration and helper objects
+        """
+
         print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
 
-    def load_metadata(self, archive_metadata, unstage_path):
+    def load_metadata(self, archive_metadata: dict, unstage_path: str) -> None:
+        """Populate the staging and unstaging metadata
+
+        :param archive_metadata: dictionary containing details about the archive
+        :param unstage_path: path to the unstaging area
+        """
         print(f'load_metadata')
         archive_type = self.detail_manager.read_metadata_type(archive_metadata)
         if archive_type == ArchiveType.ARCHIVE:
             self.populate_unstage_metadata(archive_metadata, unstage_path)
 
-    def populate_unstage_metadata(self, archive_metadata, unstage_path):
+    def populate_unstage_metadata(self,
+                                  archive_metadata: dict,
+                                  unstage_path: str) -> None:
+        """Update the unstaging metadata
+
+        :param archive_metadata: dictionary containing details about the archive
+        :param unstage_path: path to the unstaging area
+        """
         print(f'populate_unstage_metadata')
         self._update_with_unstaging_destinations(archive_metadata, unstage_path)
         self._update_with_soft_links(archive_metadata, unstage_path)
 
-    def _update_with_unstaging_destinations(self, archive_metadata, unstage_path):
+    def _update_with_unstaging_destinations(self,
+                                            archive_metadata: dict,
+                                            unstage_path: str) -> None:
+        """Build the unstaging destinations for each file to be unstaged
+
+        :param archive_metadata: dictionary containing details about the archive
+        :param unstage_path: path to the unstaging area
+        """
         print(f'_update_with_unstaging_destinations')
         unstage_metadata_dc = copy.deepcopy(
             self.detail_manager.read_unstage(archive_metadata)
@@ -46,7 +70,13 @@ class StageManager:
                         'unstage_storage_details': unstage_storage_details})
 
     @staticmethod
-    def _update_with_soft_links(archive_metadata, unstage_path):
+    def _update_with_soft_links(archive_metadata: dict,
+                                unstage_path: str) -> None:
+        """Build the soft link destinations for each file to be unstaged
+
+        :param archive_metadata: dictionary containing details about the archive
+        :param unstage_path: path to the unstaging area
+        """
         print(f'_update_with_soft_links')
         unstage_metadata_dc = copy.deepcopy(archive_metadata)
         for original_file_dc, unstage_details_dc in unstage_metadata_dc['UNSTAGE'].items():
@@ -61,10 +91,16 @@ class StageManager:
                         'soft_link_command': soft_link_command})
 
     def stage_files(self):
-        pass
+        print()  # TODO
 
     @staticmethod
     def unstage_files(archive_metadata, file_manager):
+        """Execute the unstaging action, moving files from the archive to their
+            respective unstaging destination
+
+        :param archive_metadata: dictionary containing details about the archive
+        :param unstage_path: path to the unstaging area
+        """
         print(f'unstage_files')
         unstage_metadata = archive_metadata['UNSTAGE']
         for original_file, unstage_details in unstage_metadata.items():
@@ -75,7 +111,16 @@ class StageManager:
                 file_manager.move_duplicate_file(unstage_file, unstage_file_details)
 
 
-def _build_unstage_storage_details(original, unstage_file, unstage_path):
+def _build_unstage_storage_details(original: str,
+                                   unstage_file: str,
+                                   unstage_path: str) -> dict:
+    """Build the unstaging paths
+
+    :param original: the parent file for the duplicate to be unstaged
+    :param unstage_file: the duplicate file to be moved to unstaging
+    :param unstage_path: the unstaging path
+    :return:
+    """
     original_filepath_as_name = convert_filepath_to_filename(original)
     unstage_filepath_as_name = convert_filepath_to_filename(unstage_file)
     unstage_parent_folder = str(Path(unstage_path, original_filepath_as_name))
@@ -88,7 +133,12 @@ def _build_unstage_storage_details(original, unstage_file, unstage_path):
     return unstage_storage_details
 
 
-def _build_soft_link_command(original, unstage_path):
+def _build_soft_link_command(original: str, unstage_path: str) -> list:
+    """
+
+    :param original: the parent file at which the soft link will point
+    :param unstage_path: the unstaging path
+    """
     soft_link_name = convert_filepath_to_soft_link_name(original)
     soft_link_label = str(Path(unstage_path, soft_link_name, soft_link_name))
     soft_link_command = build_soft_link_command(original, soft_link_label)

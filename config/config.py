@@ -9,7 +9,7 @@ home = environ.get("HOME")
 config = {
 
     # MAIN VALUES BELOW
-    # This isn't used but could be useful if a debug mode was needed
+    # This is not used, but could be if a debug mode was needed
     ConfigKey.DEBUG: False,
     # MAIN VALUES ABOVE
 
@@ -23,13 +23,15 @@ config = {
     #   manager class documentation
     ConfigKey.ARCHIVES: {
         'archive_a': {
-            ConfigKey.SOURCE_PATH:  f'',
-            ConfigKey.STAGE_PATH:   f'',
-            ConfigKey.ARCHIVE_PATH: f'',
-            ConfigKey.UNSTAGE_PATH: f''
+            ConfigKey.SOURCE_PATH:      f'',
+            ConfigKey.STAGE_PATH:       f'',
+            ConfigKey.GRAVEYARD_PATH:   f'',
+            ConfigKey.ARCHIVE_PATH:     f'',
+            ConfigKey.UNSTAGE_PATH:     f''
         },
     },
     # Value chosen to be beyond reasonable file path lengths
+    #   It is used for the file length sorting algorithm
     ConfigKey.FILE_NAME_LEN_MAX_VALUE: 9999,
     # Available values : md5, sha1
     #   Determines which hashing algorithm to use
@@ -39,9 +41,21 @@ config = {
     #   alphabetically, and declares the "alphabetically first" file as the
     #   original. This is obviously not necessary, so it can be skipped.
     # The threshold over which a file will be considered large,
-    #   affects the verboseness of some console output
+    #   affects the verboseness of some console output, for example, a
+    #   loading bar will be displayed when hashing files larger than this
     ConfigKey.LARGE_FILE_THRESHOLD: 100000000,
+    # Determines whether soft links will be considered when searching for
+    #   duplicate files. Disabled by default to prevent moving soft links
     ConfigKey.SKIP_SOFT_LINKS: True,
+    # Toggles the feature that reads the duplicate (parent and children)
+    #   file names and re-assigns the parent role to one of the children
+    #   using two methods.
+    # Method 1 (Prioritized) : Declares the file with the shortest file
+    #   name to be the parent
+    # Method 2 (Fall back) : If multiple files match the shortest file length
+    #   then the file paths will be sorted alphabetically, with the 'first'
+    #   (closest to 'A') file being declared to be the parent file and all
+    #   others declared to be duplicates
     ConfigKey.SORT_DUPLICATE_HIERARCHY: True,
     # ARCHIVE MANAGER VALUES ABOVE
 
@@ -49,6 +63,10 @@ config = {
     # LOGGER VALUES ABOVE
 
     # PROGRESS VALUES BELOW
+    # How often to update the progress bar, a value of 1 would mean to
+    #   update the loading bar every time it has moved 1%
+    ConfigKey.PROGRESS_BAR_INCREMENT: 1,
+    # Padding value to make the loading bar fit the terminal window
     ConfigKey.TERMINAL_DIALOG_PADDING: 7,
     # PROGRESS VALUES ABOVE
 

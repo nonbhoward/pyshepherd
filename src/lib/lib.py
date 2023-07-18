@@ -9,22 +9,44 @@ from src.enumerations import Command
 import shutil
 
 
-def build_soft_link_command(path_to_target, soft_link_name):
+def build_soft_link_command(path_to_target: str, soft_link_name: str) -> list:
+    """Build a soft link command using the provided target and name
+
+    :param path_to_target: the target of the soft link
+    :param soft_link_name: the soft link label
+    :return: the soft link command
+    """
     path_to_soft_link = soft_link_name
     return [* Command.SoftLink.root, path_to_target, path_to_soft_link]
 
 
-def convert_filepath_to_filename(file_path):
+def convert_filepath_to_filename(file_path: str) -> str:
+    """Replaces /'s with _'s to convert a filepath into a filename
+
+    :param file_path: the path to a file
+    :return: the new file name
+    """
     file_name = file_path.replace('/', '_')[1:]
     return file_name
 
 
-def convert_filepath_to_soft_link_name(file_path):
+def convert_filepath_to_soft_link_name(file_path: str) -> str:
+    """Replaces /'s with _'s to convert a filepath into a link name
+
+    :param file_path: the path to a file
+    :return: the new link name
+    """
     soft_link_name = file_path.replace('/', '_')[1:]
     return soft_link_name
 
 
-def read_all_files(path, skip_soft_links):
+def read_all_files(path: str, skip_soft_links: bool) -> dict:
+    """Recursively fetch all files in a path
+
+    :param path: the path to recursively crawl
+    :param skip_soft_links: a toggle to ignore soft links
+    :return: a dictionary of all files, with their file size
+    """
     all_files = {}
     for root, _, files in walk(path):
         print(f'Reading files in {root}')
@@ -45,7 +67,13 @@ def read_all_files(path, skip_soft_links):
     return all_files
 
 
-def loading_dialog(percentage):
+def loading_dialog(percentage: float) -> str:
+    """Construct the loading dialog from a percentage, taking into account
+        the width of the parent terminal
+
+    :param percentage: a float value representing a percentage
+    :return: a string that visually represents the percentage
+    """
     if percentage < 0:
         return  # Disregard negative values
 

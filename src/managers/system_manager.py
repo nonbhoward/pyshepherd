@@ -12,24 +12,33 @@ from src.enumerations import Network
 
 class SystemManager:
     def __init__(self, detail_manager):
+        """Initialize the system manager
+
+        :param detail_manager: access to config and helpers
+        """
         print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
         self._debug = detail_manager.debug
         self._network_connected = None
 
     def run(self):
+        """Primary actions of the system manager"""
         print(f'Running {self.__class__.__name__}')
+
         self.disk_check()
+
         if self.detail_manager.require_network:
             self.network_check()
 
     @staticmethod
     def disk_check():
+        """Check the disks from the command line"""
         print(f'disk_check')
         if not disks_ready():
             raise OSError(f'Disks in unexpected state')
 
     def network_check(self):
+        """Check the network from the command line"""
         print(f'network_check')
         if not network_ready(self.detail_manager):
             raise OSError(f'Network in unexpected state')
@@ -76,17 +85,34 @@ def read_network_state(cmd=Command.Network.ifconfig) -> dict:
     return _parse_raw_network_state(_read_raw_network_state(cmd))
 
 
-def _read_raw_disk_state(cmd) -> str:
+def _read_raw_disk_state(cmd: list) -> str:
+    """Read and return the raw disk information
+
+    :param cmd: the disk information command
+    :return: the raw disk information from the command line
+    """
     if cmd == Command.Disk.df:
         return str(run(['df'], capture_output=True).stdout.decode())
 
 
-def _read_raw_network_state(cmd) -> str:
+def _read_raw_network_state(cmd: str) -> str:
+    """Read and return the raw network information
+
+    :param cmd: the network information command
+    :return: the raw network information from the command line
+    """
     if cmd == Command.Network.ifconfig:
         return str(run(['ifconfig'], capture_output=True).stdout.decode())
 
 
-def _parse_raw_disk_state(raw_disk_state, cmd=Command.Disk.df):
+def _parse_raw_disk_state(raw_disk_state: str,
+                          cmd: str = Command.Disk.df) -> dict:
+    """Parse the raw disk state into a python dictionary
+
+    :param raw_disk_state: the raw disk state from the command line
+    :param cmd: the command used to generate the raw disk state information
+    :return: a dictionary containing the parsed disk state
+    """
     raw_disk_state_lines = raw_disk_state.split('\n')
     _verify_header(raw_disk_state_lines, cmd)
     disk_state = {}
@@ -113,7 +139,14 @@ def _parse_raw_disk_state(raw_disk_state, cmd=Command.Disk.df):
     return disk_state
 
 
-def _parse_raw_network_state(raw_network_state, cmd=Command.Network.ifconfig):
+def _parse_raw_network_state(raw_network_state: str,
+                             cmd: str = Command.Network.ifconfig) -> dict:
+    """Parse the raw network state into a python dictionary
+
+    :param raw_network_state: the raw network state from the command line
+    :param cmd: the command used to generate the raw network state information
+    :return: a dictionary containing the parsed network state
+    """
     raw_network_state_lines = raw_network_state.split('\n')
     _verify_header(raw_network_state_lines, cmd)
     network_state = {}
@@ -175,7 +208,11 @@ def _parse_raw_network_state(raw_network_state, cmd=Command.Network.ifconfig):
     return network_state
 
 
-def _validate_network_snapshots(network_snapshots):
+def _validate_network_snapshots(network_snapshots: dict) -> None:
+    """Read the network snapshots to verify network activity is ongoing
+
+    :param network_snapshots: time-spaced snapshots of the network interfaces
+    """
     byte_rx_snapshots = []
     byte_tx_snapshots = []
     for idx, network_snapshot in enumerate(network_snapshots):
@@ -188,7 +225,12 @@ def _validate_network_snapshots(network_snapshots):
         raise OSError('No network activity detected')
 
 
-def _verify_header(raw_disk_state_lines: list, cmd: str):
+def _verify_header(raw_disk_state_lines: list, cmd: str) -> None:
+    """Validate the raw disk state header is in expected format
+
+    :param raw_disk_state_lines: a list of raw disk state lines
+    :param cmd: the command used to generate the raw disk state lines
+    """
     if cmd == Command.Disk.df:
         header_cols = Command.Output.df['Header Columns']
         header = raw_disk_state_lines[0]
@@ -198,6 +240,12 @@ def _verify_header(raw_disk_state_lines: list, cmd: str):
 
 
 def _validate_df_header(header: str, header_cols: list) -> bool:
+    """Validate the raw disk state header is in expected format
+
+    :param header: the unparsed disk header
+    :param header_cols: the disk header columns
+    :return: bool indicating all expected headers found in header string
+    """
     header_cols_state = [0 for _ in header_cols]
     for idx, header_col in enumerate(header_cols):
         if header_col in header:
