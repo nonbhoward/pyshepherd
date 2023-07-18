@@ -38,9 +38,12 @@ class FileManager:
             print(f'Failed to create soft link : {soft_link_command}, {exc}')
             raise exc
 
-    def move_duplicate_files(self, unstage_file, unstage_file_details):
-        destination_parent_folder = unstage_file_details['unstage_storage_details']
-        pass
+    def move_duplicate_file(self, unstage_file, unstage_file_details):
+        unstage_file_dst = unstage_file_details['unstage_storage_details']['unstage_file_destination']
+        self.move_file(
+            src=unstage_file,
+            dst=unstage_file_dst
+        )
 
     def copy_file(self, src, dst):
         self.validate_paths(src, dst)
@@ -62,5 +65,6 @@ class FileManager:
     def validate_paths(src, dst):
         if not exists(src):
             raise OSError(f'Src not exist : {src}')
+        dst = '/'.join(dst.split('/')[:-1])
         if not exists(dst):
             raise OSError(f'Dst not exist : {dst}')

@@ -66,8 +66,7 @@ class StageManager:
                 file_manager.create_required_folders(unstage_file_details)
                 soft_link_command = unstage_file_details['soft_link_command']
                 file_manager.create_soft_link(soft_link_command)
-                file_manager.move_duplicate_files(unstage_file, unstage_file_details)
-        pass
+                file_manager.move_duplicate_file(unstage_file, unstage_file_details)
 
 
 def _build_unstage_storage_details(original, unstage_file, unstage_path):
