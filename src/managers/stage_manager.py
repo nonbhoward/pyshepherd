@@ -1,12 +1,14 @@
 # A class to handle the staging and unstaging of files
-import copy
+
 # imports, python
+import copy
 from pathlib import Path
 
 # imports, project
 from src.lib.lib import build_soft_link_command
 from src.lib.lib import convert_filepath_to_filename
 from src.lib.lib import convert_filepath_to_soft_link_name
+from src.enumerations import ArchiveType
 
 
 class StageManager:
@@ -14,18 +16,18 @@ class StageManager:
     def __init__(self, detail_manager):
         self.detail_manager = detail_manager
 
-    def load_metadata(self, unstage_metadata, unstage_path):
-        archive_type = unstage_metadata['type']
-        if archive_type == 'archive':
-            self.populate_unstage_metadata(unstage_metadata, unstage_path)
+    def load_metadata(self, archive_metadata, unstage_path):
+        archive_type = self.detail_manager.read_metadata_type(archive_metadata)
+        if archive_type == ArchiveType.archive:
+            self.populate_unstage_metadata(archive_metadata, unstage_path)
 
-    def populate_unstage_metadata(self, unstage_metadata, unstage_path):
-        self._update_with_unstaging_destinations(unstage_metadata, unstage_path)
-        self._update_with_soft_links(unstage_metadata, unstage_path)
+    def populate_unstage_metadata(self, archive_metadata, unstage_path):
+        self._update_with_unstaging_destinations(archive_metadata, unstage_path)
+        self._update_with_soft_links(archive_metadata, unstage_path)
 
     @staticmethod
-    def _update_with_unstaging_destinations(unstage_metadata, unstage_path):
-        file_metadata_dc = copy.deepcopy(unstage_metadata)
+    def _update_with_unstaging_destinations(archive_metadata, unstage_path):
+        file_metadata_dc = copy.deepcopy(archive_metadata)
         for original_file_dc, unstage_details_dc in file_metadata_dc['unstage'].items():
             for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
                 unstage_storage_details = \
@@ -33,21 +35,21 @@ class StageManager:
                         original_file_dc,
                         unstage_file_dc,
                         unstage_path)
-                unstage_metadata['unstage'][
+                archive_metadata['unstage'][
                     original_file_dc][
                     unstage_file_dc].update({
                         'unstage_storage_details': unstage_storage_details})
 
     @staticmethod
-    def _update_with_soft_links(unstage_metadata, unstage_path):
-        unstage_metadata_dc = copy.deepcopy(unstage_metadata)
+    def _update_with_soft_links(archive_metadata, unstage_path):
+        unstage_metadata_dc = copy.deepcopy(archive_metadata)
         for original_file_dc, unstage_details_dc in unstage_metadata_dc['unstage'].items():
             for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
                 soft_link_command = _build_soft_link_command(
                     original_file_dc,
                     unstage_path
                 )
-                unstage_metadata['unstage'][
+                archive_metadata['unstage'][
                     original_file_dc][
                     unstage_file_dc].update({
                         'soft_link_command': soft_link_command})
@@ -56,8 +58,8 @@ class StageManager:
         pass
 
     @staticmethod
-    def unstage_files(unstage_metadata, file_manager):
-        unstage_metadata = unstage_metadata['unstage']
+    def unstage_files(archive_metadata, file_manager):
+        unstage_metadata = archive_metadata['unstage']
         for original_file, unstage_details in unstage_metadata.items():
             for unstage_file, unstage_file_details in unstage_details.items():
                 file_manager.create_required_folders(unstage_file_details)
@@ -70,9 +72,9 @@ class StageManager:
 def _build_unstage_storage_details(original, unstage_file, unstage_path):
     original_filepath_as_name = convert_filepath_to_filename(original)
     unstage_filepath_as_name = convert_filepath_to_filename(unstage_file)
-    unstage_parent_folder = Path(unstage_path, original_filepath_as_name)
+    unstage_parent_folder = str(Path(unstage_path, original_filepath_as_name))
     unstage_file_destination = \
-        Path(unstage_path, original_filepath_as_name, unstage_filepath_as_name)
+        str(Path(unstage_path, original_filepath_as_name, unstage_filepath_as_name))
     unstage_storage_details = {
         'unstage_parent_folder': unstage_parent_folder,
         'unstage_file_destination': unstage_file_destination

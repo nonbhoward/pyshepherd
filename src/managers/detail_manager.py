@@ -3,6 +3,9 @@
 # imports, python
 from types import MappingProxyType
 
+# imports, project
+from src.enumerations import ArchiveType
+
 
 class DetailManager:
 
@@ -70,8 +73,26 @@ class DetailManager:
         return self.archives[archive_name]['unstage_path']
 
     # Metadata functions
+    @property
+    def unstage_metadata_empty(self):
+        unstage_metadata_empty = {
+            'type': ArchiveType.archive,
+            'unstage': {}
+        }
+        return unstage_metadata_empty
+
+    @staticmethod
+    def archive_metadata_update(archive_metadata, file, metadata):
+        archive_metadata['unstage'].update({
+            file: metadata
+        })
+
     def read_metadata(self, archive_name):
         return self.metadata[archive_name]
+
+    @staticmethod
+    def read_metadata_type(unstage_metadata):
+        return unstage_metadata['type']
 
     def write_metadata(self, archive_name, file_metadata):
         self.metadata[archive_name] = file_metadata

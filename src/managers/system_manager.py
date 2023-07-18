@@ -1,3 +1,5 @@
+# Perform checks and fixes related to the operating system
+
 # imports, python
 from subprocess import run
 from time import sleep

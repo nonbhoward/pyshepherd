@@ -1,3 +1,6 @@
+# The manager of archives, the uniqueness of their files, the file metadata,
+#   and the files themselves
+
 # imports, python
 import copy
 from hashlib import md5
@@ -5,8 +8,6 @@ from hashlib import sha1
 
 # imports, project
 from src.lib.lib import read_all_files
-from src.managers.file_manager import FileManager
-from src.managers.stage_manager import StageManager
 
 
 class ArchiveManager:
@@ -55,13 +56,15 @@ class ArchiveManager:
         to the unstaging area from the archive. This can be thought of as a
         recycling bin where files can be evaluated before they are deleted.
     """
-    def __init__(self, detail_manager):
+    def __init__(self, detail_manager, file_manager, stage_manager):
         self.detail_manager = detail_manager
         self._debug = detail_manager.debug
+
         # Store metadata about each archive
-        self.file_manager = FileManager(detail_manager)
-        self.stage_manager = StageManager(detail_manager)
-        # Hash generators
+        self.file_manager = file_manager(detail_manager)
+        self.stage_manager = stage_manager(detail_manager)
+
+        # Setup hash generator
         if detail_manager.hash_algo == 'sha1':
             detail_manager.hasher_algo = sha1
         elif detail_manager.hash_algo == 'md5':
@@ -70,41 +73,72 @@ class ArchiveManager:
             raise RuntimeError(f'Unknown hash_algo value set : '
                                f'{detail_manager.hash_algo}')
 
-    def run(self):
+    def run(self) -> None:
+        """The primary actions of the archive manager. If the archive is
+            found to be invalid then the source will not be parsed.
+            If the archive is found to be valid, then the source will be
+            parsed. The archive is valid when it contains no duplicate
+            files.
+        """
+        # Iterate through each archive and perform management actions
         for archive_name, paths in self.detail_manager.archives.items():
+
+            # Validate that there are no duplicate files in the archive
             self.validate_archive(archive_name)
+
+            # If there are duplicate files found in the archive, then there
+            #   will be metadata. These duplicate files will trigger unstaging
+            #   of those files to begin
             if self.detail_manager.read_metadata(archive_name):
-                unstage_path = \
-                    self.detail_manager.path_unstage(archive_name)
+                unstage_path = self.detail_manager.path_unstage(archive_name)
                 self.unstage_archive(archive_name, unstage_path)
-            else:
+            else:  # The archive is valid, process the source for staging
                 # Validate source and staging paths
                 self.validate_source_path(archive_name)
                 self.validate_stage_path(archive_name)
-                # Read the source
+
+                # Read files from the source path
+                source_filedata = self.parse_source(self.read_source(archive_name))
                 # Compare the source to the archive
-                source_filedata = \
-                    self.parse_source(self.read_source(archive_name))
                 # Stage unique source files
                 self.stage_unique(source_filedata)
 
-    def validate_archive(self, archive_name):
-        """Verify that the archive contains no duplicate files"""
+    def validate_archive(self, archive_name: str) -> None:
+        """Validate the archive by reading file metadata. Unstage the
+            duplicate files.
+        :arg, archive_name: a string that allows the archive manager to know
+            which archive is being validated.
+        """
+
+        # Get the path to the archive
         path_archive = self.detail_manager.path_archive(archive_name)
         archive_files = read_all_files(path_archive)
+
+        # If no files are found
         if not archive_files:
             print(f'Archive is empty or path is incorrect : {path_archive}')
             exit()
-        unstage_metadata = \
-            archive_self_check(
-                generate_hashes(archive_files, self.detail_manager))
-        self.detail_manager.write_metadata(archive_name, unstage_metadata)
 
-    def unstage_archive(self, archive_name, unstage_path):
-        unstage_metadata = \
+        # Read the files and populate the metadata instructions for unstaging
+        archive_metadata = \
+            self.archive_self_check(
+                self.generate_hashes(archive_files, self.detail_manager))
+
+        # Save the metadata instructions to the detail manager
+        self.detail_manager.write_metadata(archive_name, archive_metadata)
+
+    def unstage_archive(self, archive_name: str, unstage_path: str) -> None:
+        """Read the populated file metadata, load it into the stage
+            manager, and the stage manager will unstage the files.
+        :arg, archive_name: a string that allows the archive manager to know
+            which archive is being validated.
+        :arg, unstage_path: a string that points to the unstaging parent
+            folder, which is where unstaged files will be moved
+        """
+        archive_metadata = \
             self.detail_manager.read_metadata(archive_name)
-        self.stage_manager.load_metadata(unstage_metadata, unstage_path)
-        self.stage_manager.unstage_files(unstage_metadata, self.file_manager)
+        self.stage_manager.load_metadata(archive_metadata, unstage_path)
+        self.stage_manager.unstage_files(archive_metadata, self.file_manager)
 
     def validate_source_path(self, archive_name):
         pass
@@ -119,80 +153,100 @@ class ArchiveManager:
         pass
 
     def read_source(self, paths):
-        path_source = paths['source']
+        path_source = self.detail_manager.path_source
         return ''
 
+    def archive_self_check(self, archive_hashes: dict):
+        """Process the list of files and included hashes in order to find duplicate
+            files.
+        :arg, archive_hashes: a dict of hash values keyed by file path
+        :return, archive_metadata: an initialized metadata container for
+            duplicate files with empty dictionaries initialized for each
+            file
+        """
+        archive_metadata = self._get_archive_duplicates(archive_hashes)
+        if archive_metadata:
+            print(f'Archive invalid, {len(archive_metadata)} duplicate files '
+                  f'found')
+            return archive_metadata
 
-def archive_self_check(archive_hashes):
-    unstage_metadata = _get_archive_duplicates(archive_hashes)
-    if unstage_metadata:
-        print(f'Archive invalid, {len(unstage_metadata)} duplicate files '
-              f'found')
-        return unstage_metadata
+    def _get_archive_duplicates(self, archive_hashes: dict) -> dict:
+        """Find non-unique files in the archive_hashes dictionary
+        :arg, archive_hashes: a dictionary of hash values keyed by the file path
+            used to generate them
+        :returns, archive_metadata: data about the duplicate files that will help
+            to relocate them out of the archive
+        """
+        archive_metadata = self.detail_manager.unstage_metadata_empty
+        archive_hashes_dc = copy.deepcopy(archive_hashes)
+        found_duplicates = []
+        # While dictionary has files
+        while list(archive_hashes_dc.keys()):
+            # This flag is used to escape the external for loop after a
+            #   duplicate file is found
 
+            # Iterate over a copy of the archive against another copy
+            for a_file, a_hash in archive_hashes_dc.items():
 
-def _get_archive_duplicates(archive_hashes):
-    unstage_metadata = {
-        'type': 'archive',
-        'unstage': {}
-    }
-    archive_hashes_dc = copy.deepcopy(archive_hashes)
-    found_duplicates = []
-    # While dictionary has files
-    while list(archive_hashes_dc.keys()):
-        # This flag is used to escape the external for loop after a
-        #   duplicate file is found
+                if a_file in found_duplicates:
+                    del archive_hashes_dc[a_file]  # Prevent infinite loop
+                    break  # This file is already identified as a duplicate
 
-        # Iterate over a copy of the archive against another copy
-        for a_file, a_hash in archive_hashes_dc.items():
+                # Init duplicate tracking for this a_file
+                duplicate_metadata = {}  # Duplicates for this file
+                for aa_file, aa_hash in archive_hashes.items():
 
-            if a_file in found_duplicates:
-                del archive_hashes_dc[a_file]  # Prevent infinite loop
-                break  # This file is already identified as a duplicate
+                    if a_file == aa_file:
+                        continue  # Do not compare a file with itself
 
-            # Init duplicate tracking for this a_file
-            duplicate_metadata = {}  # Duplicates for this file
-            for aa_file, aa_hash in archive_hashes.items():
+                    # Compare the hashes of differing file paths
+                    if a_hash == aa_hash:
+                        print(f'Duplicate file found in archive : {a_file}')
+                        # Initialize list of duplicates
+                        found_duplicates.append(aa_file)
+                        if not duplicate_metadata:
+                            duplicate_metadata = {aa_file: {}}
+                        else:
+                            # Update list of duplicates
+                            duplicate_metadata.update({aa_file: {}})
 
-                if a_file == aa_file:
-                    continue  # Do not compare a file with itself
+                        self.detail_manager.archive_metadata_update(
+                            archive_metadata,
+                            a_file,
+                            duplicate_metadata
+                        )
 
-                # Compare the hashes of differing file paths
-                if a_hash == aa_hash:
-                    print(f'Duplicate file found in archive : {a_file}')
-                    # Initialize list of duplicates
-                    found_duplicates.append(aa_file)
-                    if not duplicate_metadata:
-                        duplicate_metadata = {aa_file: {}}
-                    else:
-                        # Update list of duplicates
-                        duplicate_metadata.update({aa_file: {}})
-                    unstage_metadata['unstage'].update({
-                        a_file: duplicate_metadata
-                    })
+                # The internal loop has concluded, discard this value
+                del archive_hashes_dc[a_file]
+                break  # Force restart of the for loop with new dict
 
-            # The internal loop has concluded, discard this value
-            del archive_hashes_dc[a_file]
-            break  # Force restart of the for loop with new dict
+        return archive_metadata
 
-    return unstage_metadata
+    def generate_hashes(self, archive_files: list, detail_manager) -> dict:
+        """Given a list of files, generate hashes for each
+        :arg, archive_files, a list of files
+        :arg, detail_manager, the container for the hashing function
+        :return, archive_hashes, a dictionary of hashes keyed by the file path used to
+            generate them
+        """
+        archive_hashes = {}
+        for archive_file in archive_files:
+            archive_hashes.update({
+                archive_file: self.generate_hash(archive_file, detail_manager)
+            })
+        return archive_hashes
 
-
-def generate_hashes(archive_files, detail_manager):
-    archive_hashes = {}
-    for archive_file in archive_files:
-        archive_hashes.update({
-            archive_file: generate_hash(archive_file, detail_manager)
-        })
-    return archive_hashes
-
-
-def generate_hash(archive_file, detail_manager):
-    hasher = detail_manager.hasher_algo()
-    with open(archive_file, 'rb') as af:
-        while True:
-            data = af.read(detail_manager.BUF_SIZE)
-            if not data:
-                break
-            hasher.update(data)
-    return hasher.hexdigest()
+    @staticmethod
+    def generate_hash(archive_file: str, detail_manager) -> str:
+        """Given a file, generate a hash and return it
+        :arg, archive_file, the path to a file
+        :return, a hash string
+        """
+        hasher = detail_manager.hasher_algo()
+        with open(archive_file, 'rb') as af:
+            while True:
+                data = af.read(detail_manager.BUF_SIZE)
+                if not data:
+                    break
+                hasher.update(data)
+        return hasher.hexdigest()

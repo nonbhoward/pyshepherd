@@ -7,6 +7,11 @@ import os
 user = os.environ.get('USER')
 
 
+class ArchiveType:
+    archive = 'archive'
+    source = 'source'
+
+
 class Command:
     class Disk:
         df = 'df'
