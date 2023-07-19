@@ -18,6 +18,33 @@ class DetailManager:
         self._mpt_archives = MappingProxyType(self.archives)
         self.metadata = {}
 
+    # Archive
+    def archive_paths(self, archive_name):
+        return self._config[ConfigKey.ARCHIVES][archive_name]
+
+    @property
+    def create_default_archive_paths(self):
+        return self._config[ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS]
+
+    @property
+    def create_default_source_paths(self):
+        return self._config[ConfigKey.CREATE_DEFAULT_SOURCE_PATHS]
+
+    def path_archive(self, archive_name):
+        return self.archives[archive_name][ConfigKey.ARCHIVE_PATH]
+
+    def path_graveyard(self, archive_name):
+        return self.archives[archive_name][ConfigKey.GRAVEYARD_PATH]
+
+    def path_source(self, archive_name):
+        return self.archives[archive_name][ConfigKey.SOURCE_PATH]
+
+    def path_stage(self, archive_name):
+        return self.archives[archive_name][ConfigKey.STAGE_PATH]
+
+    def path_unstage(self, archive_name):
+        return self.archives[archive_name][ConfigKey.UNSTAGE_PATH]
+
     # Config
     @property
     def archives(self):
@@ -79,21 +106,51 @@ class DetailManager:
     def sort_duplicate_hierarchy(self):
         return self._config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
 
-    # Archive
-    def path_archive(self, archive_name):
-        return self.archives[archive_name][ConfigKey.ARCHIVE_PATH]
+    def update_archive_paths(self, archive_paths):
+        try:
+            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
+                ConfigKey.ARCHIVE_PATH: archive_paths[ConfigKey.ARCHIVE_PATH],
+                ConfigKey.UNSTAGE_PATH: archive_paths[ConfigKey.UNSTAGE_PATH]
+            })
+        except Exception as exc:
+            print(exc)
+            raise exc
 
-    def path_graveyard(self, archive_name):
-        return self.archives[archive_name][ConfigKey.GRAVEYARD_PATH]
+    def update_source_paths(self, archive_paths):
+        try:
+            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
+                ConfigKey.GRAVEYARD_PATH: archive_paths[ConfigKey.GRAVEYARD_PATH],
+                ConfigKey.SOURCE_PATH: archive_paths[ConfigKey.SOURCE_PATH],
+                ConfigKey.STAGE_PATH: archive_paths[ConfigKey.STAGE_PATH],
+            })
+        except Exception as exc:
+            print(exc)
+            raise exc
 
-    def path_source(self, archive_name):
-        return self.archives[archive_name][ConfigKey.SOURCE_PATH]
+    # File Manager
+    @property
+    def default_parent_folder(self):
+        return self.config[ConfigKey.DEFAULT_PARENT_FOLDER]
 
-    def path_stage(self, archive_name):
-        return self.archives[archive_name][ConfigKey.STAGE_PATH]
+    @property
+    def default_archive_folder(self):
+        return self.config[ConfigKey.DEFAULT_ARCHIVE_FOLDER]
 
-    def path_unstage(self, archive_name):
-        return self.archives[archive_name][ConfigKey.UNSTAGE_PATH]
+    @property
+    def default_graveyard_folder(self):
+        return self.config[ConfigKey.DEFAULT_GRAVEYARD_FOLDER]
+
+    @property
+    def default_source_folder(self):
+        return self.config[ConfigKey.DEFAULT_SOURCE_FOLDER]
+
+    @property
+    def default_stage_folder(self):
+        return self.config[ConfigKey.DEFAULT_STAGE_FOLDER]
+
+    @property
+    def default_unstage_folder(self):
+        return self.config[ConfigKey.DEFAULT_UNSTAGE_FOLDER]
 
     # Metadata
     @property

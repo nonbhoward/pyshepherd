@@ -117,18 +117,8 @@ class ArchiveManager:
 
         # Iterate through each archive
         for archive_name, paths in self.detail_manager.archives.items():
-
-            # Validate staging, unstaging, and graveyard areas
-            #   If those locations are not empty this will fail
-            self.validate_path_empty(archive_name, 'UNSTAGE')
-            self.validate_path_empty(archive_name, 'STAGE')
-            self.validate_path_empty(archive_name, 'GRAVEYARD')
-
-            # Validate there are no duplicate files in the archive
+            self.validate_paths(archive_name)
             self.validate_archive(archive_name)
-
-            # If there are duplicate files found in the archive, begin the
-            #   unstaging process, the source will not be evaluated this run
             if self.detail_manager.read_metadata(archive_name):
                 unstage_path = self.detail_manager.path_unstage(archive_name)
                 self.unstage_archive(archive_name, unstage_path)
@@ -144,6 +134,44 @@ class ArchiveManager:
                 # Compare the source to the archive
                 # Stage unique source files
                 self.stage_unique(source_filedata)
+
+    def validate_paths(self, archive_name):
+        # Validate archive paths, create defaults if option enabled
+        archive_paths_set_in_config = self.validate_archive_paths(archive_name)
+        create_default_archive_paths = self.detail_manager.create_default_archive_paths
+        if not archive_paths_set_in_config and create_default_archive_paths:
+            self.file_manager.create_default_archive_paths(archive_name)
+
+        # Validate source paths, create defaults if option enabled
+        source_paths_set_in_config = self.validate_source_paths(archive_name)
+        create_default_source_paths = self.detail_manager.create_default_source_paths
+        if not source_paths_set_in_config and create_default_source_paths:
+            self.file_manager.create_default_source_paths(archive_name)
+
+    def validate_archive_paths(self, archive_name):
+        validation_paths = [
+            self.detail_manager.path_archive(archive_name),
+            self.detail_manager.path_unstage(archive_name)
+        ]
+        # TODO make sure the paths exist
+        if not all(validation_paths):
+            return False
+        return True
+
+    def validate_source_paths(self, archive_name):
+        source_paths = [
+            self.detail_manager.path_graveyard(archive_name),
+            self.detail_manager.path_source(archive_name),
+            self.detail_manager.path_stage(archive_name)
+        ]
+        # TODO make sure the paths exist
+        if not all(source_paths):
+            return False
+        return True
+
+    def verify_paths_in_config(self, archive_name):
+        paths_in_config = self.detail_manager.archive_paths(archive_name)
+        return paths_in_config
 
     def validate_archive(self, archive_name: str) -> None:
         """Validate the archive by reading file metadata. Populate the file
@@ -170,25 +198,6 @@ class ArchiveManager:
 
         # Save the metadata instructions to the detail manager
         self.detail_manager.write_metadata(archive_name, archive_metadata)
-
-    def validate_path_empty(self, archive_name: str, path_label: str):
-
-        # Exit program if path is not empty
-        if path_label == 'GRAVEYARD':
-            path_to_validate = self.detail_manager.path_graveyard(archive_name)
-        elif path_label == 'STAGE':
-            path_to_validate = self.detail_manager.path_stage(archive_name)
-        elif path_label == 'UNSTAGE':
-            path_to_validate = self.detail_manager.path_unstage(archive_name)
-        else:
-            print(f'Invalid path label {path_label}')
-            exit()
-        path_contents = listdir(path_to_validate)
-        if path_contents:
-            print(f'The {path_label} area : {path_to_validate} is not empty')
-            print('This directory is required to be empty to prevent data loss')
-            print('Program will now exit')
-            exit()
 
     def unstage_archive(self, archive_name: str, unstage_path: str) -> None:
         """Read the populated file metadata, load it into the stage

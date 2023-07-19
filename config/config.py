@@ -14,22 +14,28 @@ config = {
     # MAIN VALUES ABOVE
 
     # ARCHIVE MANAGER VALUES BELOW
-    # BUF_SIZE is to prevent hashing of large files from consuming
-    #   system resources by hashing the file in BUF_SIZE chunks
-    ConfigKey.BUF_SIZE: 65536,
     # Archives is the collected archives that will be managed by the
     #   archive manager class. Each archive has a label, and four
     #   paths. The use of those paths is described in the archive
     #   manager class documentation
     ConfigKey.ARCHIVES: {
-        'archive_a': {
+        ConfigKey.DEFAULT_ARCHIVE: {
+            ConfigKey.ARCHIVE_PATH:     f'',
+            ConfigKey.GRAVEYARD_PATH:   f'',
             ConfigKey.SOURCE_PATH:      f'',
             ConfigKey.STAGE_PATH:       f'',
-            ConfigKey.GRAVEYARD_PATH:   f'',
-            ConfigKey.ARCHIVE_PATH:     f'',
             ConfigKey.UNSTAGE_PATH:     f''
         },
     },
+    # BUF_SIZE is to prevent hashing of large files from consuming
+    #   system resources by hashing the file in BUF_SIZE chunks
+    ConfigKey.BUF_SIZE: 65536,
+    # Toggle if you want a default path structure to be made for archive
+    #   paths which includes the archive and unstage path
+    ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS: True,
+    # Toggle if you want a default path structure to be made for archive
+    #   paths which includes the graveyard, source, and stage path
+    ConfigKey.CREATE_DEFAULT_SOURCE_PATHS: True,
     # Value chosen to be beyond reasonable file path lengths
     #   It is used for the file length sorting algorithm
     ConfigKey.FILE_NAME_LEN_MAX_VALUE: 9999,
@@ -58,6 +64,15 @@ config = {
     #   others declared to be duplicates
     ConfigKey.SORT_DUPLICATE_HIERARCHY: True,
     # ARCHIVE MANAGER VALUES ABOVE
+
+    # FILE MANAGER VALUES BELOW
+    ConfigKey.DEFAULT_PARENT_FOLDER: '_PYSHEPHERD',
+    ConfigKey.DEFAULT_ARCHIVE_FOLDER: '_ARCHIVE',
+    ConfigKey.DEFAULT_GRAVEYARD_FOLDER: '_GRAVEYARD',
+    ConfigKey.DEFAULT_SOURCE_FOLDER: '_SOURCE',
+    ConfigKey.DEFAULT_STAGE_FOLDER: '_STAGE',
+    ConfigKey.DEFAULT_UNSTAGE_FOLDER: '_UNSTAGE',
+    # FILE MANAGER VALUES ABOVE
 
     # LOGGER VALUES BELOW
     # LOGGER VALUES ABOVE
