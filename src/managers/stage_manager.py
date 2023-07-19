@@ -64,13 +64,15 @@ class StageManager:
                         original_file_dc,
                         unstage_file_dc,
                         unstage_path)
-                archive_metadata['UNSTAGE'][
-                    original_file_dc][
-                    unstage_file_dc].update({
-                        'unstage_storage_details': unstage_storage_details})
+                self.detail_manager.set_unstage_storage_details(
+                    archive_metadata,
+                    original_file_dc,
+                    unstage_file_dc,
+                    unstage_storage_details
+                )
 
-    @staticmethod
-    def _update_with_soft_links(archive_metadata: dict,
+    def _update_with_soft_links(self,
+                                archive_metadata: dict,
                                 unstage_path: str) -> None:
         """Build the soft link destinations for each file to be unstaged
 
@@ -78,8 +80,10 @@ class StageManager:
         :param unstage_path: path to the unstaging area
         """
         print(f'_update_with_soft_links')
-        unstage_metadata_dc = copy.deepcopy(archive_metadata)
-        for original_file_dc, unstage_details_dc in unstage_metadata_dc['UNSTAGE'].items():
+        archive_metadata_dc = copy.deepcopy(archive_metadata)
+        unstage_metadata_dc = \
+            self.detail_manager.read_unstage_from(archive_metadata_dc)
+        for original_file_dc, unstage_details_dc in unstage_metadata_dc.items():
             for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
                 soft_link_command = _build_soft_link_command(
                     original_file_dc,

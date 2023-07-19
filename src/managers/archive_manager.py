@@ -5,7 +5,6 @@
 from collections import namedtuple
 from hashlib import md5
 from hashlib import sha1
-from os import listdir
 import copy
 import sys
 
@@ -31,7 +30,7 @@ class ArchiveManager:
             source ~> graveyard
             archive ~> unstage
 
-    # TODO This feature is not operational
+    # TODO This feature has not been started yet
     Source Files
         "New" files that are introduced to the system must first be compared
             against every file in the archive. If the source file is found to
@@ -119,15 +118,16 @@ class ArchiveManager:
         for archive_name, paths in self.detail_manager.archives.items():
             self.validate_paths(archive_name)
             self.validate_archive(archive_name)
+
+            # If there is metadata then some duplicates were found
             if self.detail_manager.read_metadata(archive_name):
-                unstage_path = self.detail_manager.path_unstage(archive_name)
+                unstage_path = self.detail_manager.get_path_unstage(archive_name)
                 self.unstage_archive(archive_name, unstage_path)
             else:
                 # TODO features below are placeholder functions, at the moment
                 #   this program only evaluates the archive
                 # The archive is valid, parse the source for staging
                 # Validate source and staging paths
-                self.validate_source_path(archive_name)
 
                 # Read files from the source path
                 source_filedata = self.parse_source(self.read_source(archive_name))
@@ -135,7 +135,14 @@ class ArchiveManager:
                 # Stage unique source files
                 self.stage_unique(source_filedata)
 
-    def validate_paths(self, archive_name):
+    def validate_paths(self, archive_name: str) -> None:
+        """Check that the paths are set in configuration, check that the
+            paths the keys return exist. If the create default paths option
+            is enabled and the paths are not set in the config, attempt to
+            create the default paths.
+
+        :param archive_name: the name of the archive
+        """
         # Validate archive paths, create defaults if option enabled
         archive_paths_set_in_config = self.validate_archive_paths(archive_name)
         create_default_archive_paths = self.detail_manager.create_default_archive_paths
@@ -148,10 +155,15 @@ class ArchiveManager:
         if not source_paths_set_in_config and create_default_source_paths:
             self.file_manager.create_default_source_paths(archive_name)
 
-    def validate_archive_paths(self, archive_name):
+    def validate_archive_paths(self, archive_name: str) -> bool:
+        """Check that the paths are set in configuration, check that the
+        paths the keys return exist.
+
+        :param archive_name: the name of the archive
+        """
         archive_paths_set = [
-            self.detail_manager.path_archive(archive_name),
-            self.detail_manager.path_unstage(archive_name)
+            self.detail_manager.get_path_archive(archive_name),
+            self.detail_manager.get_path_unstage(archive_name)
         ]
 
         # Check that the defined paths exist
@@ -163,11 +175,16 @@ class ArchiveManager:
             return True
         return False
 
-    def validate_source_paths(self, archive_name):
+    def validate_source_paths(self, archive_name: str) -> bool:
+        """Check that the paths are set in configuration, check that the
+        paths the keys return exist.
+
+        :param archive_name: the name of the archive
+        """
         source_paths_set = [
-            self.detail_manager.path_graveyard(archive_name),
-            self.detail_manager.path_source(archive_name),
-            self.detail_manager.path_stage(archive_name)
+            self.detail_manager.get_path_graveyard(archive_name),
+            self.detail_manager.get_path_source(archive_name),
+            self.detail_manager.get_path_stage(archive_name)
         ]
 
         # Check that the defined paths exist
@@ -179,10 +196,6 @@ class ArchiveManager:
             return True
         return False
 
-    def verify_paths_in_config(self, archive_name):
-        paths_in_config = self.detail_manager.archive_paths(archive_name)
-        return paths_in_config
-
     def validate_archive(self, archive_name: str) -> None:
         """Validate the archive by reading file metadata. Populate the file
             metadata and resume
@@ -192,7 +205,7 @@ class ArchiveManager:
         print(f'validate_archive')
 
         # Get the path to the archive
-        path_archive = self.detail_manager.path_archive(archive_name)
+        path_archive = self.detail_manager.get_path_archive(archive_name)
         skip_soft_links = self.detail_manager.skip_soft_links
         archive_files = read_all_files(path_archive, skip_soft_links)
 
@@ -207,7 +220,7 @@ class ArchiveManager:
                 self.generate_hashes(archive_files, self.detail_manager))
 
         # Save the metadata instructions to the detail manager
-        self.detail_manager.write_metadata(archive_name, archive_metadata)
+        self.detail_manager.set_metadata(archive_name, archive_metadata)
 
     def unstage_archive(self, archive_name: str, unstage_path: str) -> None:
         """Read the populated file metadata, load it into the stage
@@ -223,9 +236,6 @@ class ArchiveManager:
             self.detail_manager.read_metadata(archive_name)
         self.stage_manager.load_metadata(archive_metadata, unstage_path)
         self.stage_manager.unstage_files(archive_metadata, self.file_manager)
-
-    def validate_source_path(self, archive_name):
-        print(f'validate_source_path')  # TODO
 
     def parse_source(self, source_files):
         print(f'parse_source')  # TODO
@@ -250,7 +260,7 @@ class ArchiveManager:
         if self.detail_manager.sort_duplicate_hierarchy:
             archive_metadata = self._sort_unstage_hierarchy(archive_metadata)
         if archive_metadata:
-            parent_count, children_count = _count_duplicates(archive_metadata)
+            parent_count, children_count = self._count_duplicates(archive_metadata)
             print(f'Archive invalid, {parent_count} parent file(s) found with '
                   f'{children_count} duplicate children')
             return archive_metadata
@@ -264,7 +274,7 @@ class ArchiveManager:
         """
         print(f'_get_archive_duplicates')
 
-        archive_metadata = self.detail_manager.archive_metadata_empty
+        archive_metadata = self.detail_manager.get_empty_archive_metadata
         archive_hashes_dc = copy.deepcopy(archive_hashes)
         found_duplicates = []
         # While dictionary has files
@@ -391,7 +401,7 @@ class ArchiveManager:
         hash_mod = 100
         hashes_needed = len(archive_files)
         for file, file_details in archive_files.items():
-            file_size = file_details['st_size']
+            file_size = self.detail_manager.get_file_size_from(file_details)
             if not hash_count % hash_mod:
                 print(f'Generated {hash_count} of {hashes_needed}..')
             archive_hashes.update({
@@ -466,6 +476,26 @@ class ArchiveManager:
                 hasher.update(data)
         return hasher.hexdigest()
 
+    def _count_duplicates(self, archive_metadata):
+        """Count duplicate parents and children
+
+        :param archive_metadata: the archive metadata containing details about
+            duplicate files
+        :return: parent_count, children_count, the number of parent duplicate files
+            and the number of children duplicates
+        """
+        unstage_archive = \
+            self.detail_manager.get_unstage_archive_from(archive_metadata)
+        parent_count = \
+            self.detail_manager.get_parent_count_from(archive_metadata)
+        children_count = 0
+
+        # Count the children duplicates
+        for _, children in unstage_archive.items():
+            children_count += len(children)
+
+        return parent_count, children_count
+
 
 def display_loading_dialog(progress_metadata=None, complete=False):
     """Print a loading bar to the console for large files
@@ -504,20 +534,3 @@ def display_loading_dialog(progress_metadata=None, complete=False):
     return percentage_now, percentage_last_update
 
 
-def _count_duplicates(archive_metadata):
-    """Count duplicate parents and children
-
-    :param archive_metadata: the archive metadata containing details about
-        duplicate files
-    :return: parent_count, children_count, the number of parent duplicate files
-        and the number of children duplicates
-    """
-    unstage_archive = archive_metadata['UNSTAGE']
-    parent_count = len(archive_metadata['UNSTAGE'])
-    children_count = 0
-
-    # Count the children duplicates
-    for _, children in unstage_archive.items():
-        children_count += len(children)
-
-    return parent_count, children_count

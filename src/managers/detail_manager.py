@@ -19,9 +19,6 @@ class DetailManager:
         self.metadata = {}
 
     # Archive
-    def archive_paths(self, archive_name):
-        return self._config[ConfigKey.ARCHIVES][archive_name]
-
     @property
     def create_default_archive_paths(self):
         return self._config[ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS]
@@ -29,21 +26,6 @@ class DetailManager:
     @property
     def create_default_source_paths(self):
         return self._config[ConfigKey.CREATE_DEFAULT_SOURCE_PATHS]
-
-    def path_archive(self, archive_name):
-        return self.archives[archive_name][ConfigKey.ARCHIVE_PATH]
-
-    def path_graveyard(self, archive_name):
-        return self.archives[archive_name][ConfigKey.GRAVEYARD_PATH]
-
-    def path_source(self, archive_name):
-        return self.archives[archive_name][ConfigKey.SOURCE_PATH]
-
-    def path_stage(self, archive_name):
-        return self.archives[archive_name][ConfigKey.STAGE_PATH]
-
-    def path_unstage(self, archive_name):
-        return self.archives[archive_name][ConfigKey.UNSTAGE_PATH]
 
     # Config
     @property
@@ -106,27 +88,6 @@ class DetailManager:
     def sort_duplicate_hierarchy(self):
         return self._config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
 
-    def update_archive_paths(self, archive_paths):
-        try:
-            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
-                ConfigKey.ARCHIVE_PATH: archive_paths[ConfigKey.ARCHIVE_PATH],
-                ConfigKey.UNSTAGE_PATH: archive_paths[ConfigKey.UNSTAGE_PATH]
-            })
-        except Exception as exc:
-            print(exc)
-            raise exc
-
-    def update_source_paths(self, archive_paths):
-        try:
-            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
-                ConfigKey.GRAVEYARD_PATH: archive_paths[ConfigKey.GRAVEYARD_PATH],
-                ConfigKey.SOURCE_PATH: archive_paths[ConfigKey.SOURCE_PATH],
-                ConfigKey.STAGE_PATH: archive_paths[ConfigKey.STAGE_PATH],
-            })
-        except Exception as exc:
-            print(exc)
-            raise exc
-
     # File Manager
     @property
     def default_parent_folder(self):
@@ -153,14 +114,6 @@ class DetailManager:
         return self.config[ConfigKey.DEFAULT_UNSTAGE_FOLDER]
 
     # Metadata
-    @property
-    def archive_metadata_empty(self):
-        archive_metadata_empty = {
-            MetadataKey.TYPE: ArchiveType.ARCHIVE,
-            MetadataKey.UNSTAGE: {}
-        }
-        return archive_metadata_empty
-
     @staticmethod
     def archive_metadata_update(archive_metadata, file, metadata):
         archive_metadata[MetadataKey.UNSTAGE].update({
@@ -180,6 +133,47 @@ class DetailManager:
             file: {}
         })
 
+    @property
+    def get_empty_archive_metadata(self):
+        archive_metadata_empty = {
+            MetadataKey.TYPE: ArchiveType.ARCHIVE,
+            MetadataKey.UNSTAGE: {}
+        }
+        return archive_metadata_empty
+
+    @staticmethod
+    def get_file_size_from(file_details):
+        return file_details['st_size']
+
+    @staticmethod
+    def get_parent_count_from(archive_metadata):
+        return len(archive_metadata[MetadataKey.UNSTAGE])
+
+    def get_path_archive(self, archive_name):
+        return self.archives[archive_name][ConfigKey.ARCHIVE_PATH]
+
+    def get_path_graveyard(self, archive_name):
+        return self.archives[archive_name][ConfigKey.GRAVEYARD_PATH]
+
+    def get_path_source(self, archive_name):
+        return self.archives[archive_name][ConfigKey.SOURCE_PATH]
+
+    def get_path_stage(self, archive_name):
+        return self.archives[archive_name][ConfigKey.STAGE_PATH]
+
+    def get_path_unstage(self, archive_name):
+        return self.archives[archive_name][ConfigKey.UNSTAGE_PATH]
+
+    @staticmethod
+    def get_unstage_archive_from(archive_metadata):
+        return archive_metadata[MetadataKey.UNSTAGE]
+
+    @staticmethod
+    def get_unstage_file_dst_from(unstage_file_details):
+        return unstage_file_details[
+            'unstage_storage_details'][
+            'unstage_file_destination']
+
     def read_metadata(self, archive_name):
         return self.metadata[archive_name]
 
@@ -191,11 +185,41 @@ class DetailManager:
     def read_unstage(archive_metadata):
         return archive_metadata[MetadataKey.UNSTAGE]
 
-    def write_metadata(self, archive_name, file_metadata):
+    def set_metadata(self, archive_name, file_metadata):
         self.metadata[archive_name] = file_metadata
+
+    @staticmethod
+    def set_unstage_storage_details(
+            archive_metadata,
+            original_file_dc,
+            unstage_file_dc,
+            unstage_storage_details):
+        archive_metadata['UNSTAGE'][original_file_dc][unstage_file_dc].update(
+            {'unstage_storage_details': unstage_storage_details})
+
+    def update_archive_paths(self, archive_paths):
+        try:
+            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
+                ConfigKey.ARCHIVE_PATH: archive_paths[ConfigKey.ARCHIVE_PATH],
+                ConfigKey.UNSTAGE_PATH: archive_paths[ConfigKey.UNSTAGE_PATH]
+            })
+        except Exception as exc:
+            print(exc)
+            raise exc
 
     def update_metadata(self, archive_name, file_metadata):
         self.metadata[archive_name].update({file_metadata})
+
+    def update_source_paths(self, archive_paths):
+        try:
+            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
+                ConfigKey.GRAVEYARD_PATH: archive_paths[ConfigKey.GRAVEYARD_PATH],
+                ConfigKey.SOURCE_PATH: archive_paths[ConfigKey.SOURCE_PATH],
+                ConfigKey.STAGE_PATH: archive_paths[ConfigKey.STAGE_PATH],
+            })
+        except Exception as exc:
+            print(exc)
+            raise exc
 
     # Progress
     @property

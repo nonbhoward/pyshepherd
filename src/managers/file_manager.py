@@ -133,7 +133,8 @@ class FileManager:
         :param unstage_file: file source
         :param unstage_file_details: file destination details
         """
-        unstage_file_dst = unstage_file_details['unstage_storage_details']['unstage_file_destination']
+        unstage_file_dst = \
+            self.detail_manager.get_unstage_file_dst_from(unstage_file_details)
         self.move_file(
             src=unstage_file,
             dst=unstage_file_dst
