@@ -149,25 +149,35 @@ class ArchiveManager:
             self.file_manager.create_default_source_paths(archive_name)
 
     def validate_archive_paths(self, archive_name):
-        validation_paths = [
+        archive_paths_set = [
             self.detail_manager.path_archive(archive_name),
             self.detail_manager.path_unstage(archive_name)
         ]
-        # TODO make sure the paths exist
-        if not all(validation_paths):
-            return False
-        return True
+
+        # Check that the defined paths exist
+        archive_paths_exist = []
+        for archive_path in archive_paths_set:
+            archive_paths_exist.append(
+                self.file_manager.check_exists(archive_path))
+        if all(archive_paths_set) and all(archive_paths_exist):
+            return True
+        return False
 
     def validate_source_paths(self, archive_name):
-        source_paths = [
+        source_paths_set = [
             self.detail_manager.path_graveyard(archive_name),
             self.detail_manager.path_source(archive_name),
             self.detail_manager.path_stage(archive_name)
         ]
-        # TODO make sure the paths exist
-        if not all(source_paths):
-            return False
-        return True
+
+        # Check that the defined paths exist
+        source_paths_exist = []
+        for source_path in source_paths_set:
+            source_paths_exist.append(
+                self.file_manager.check_exists(source_path))
+        if all(source_paths_set) and all(source_paths_exist):
+            return True
+        return False
 
     def verify_paths_in_config(self, archive_name):
         paths_in_config = self.detail_manager.archive_paths(archive_name)

@@ -19,6 +19,10 @@ class FileManager:
         print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
 
+    @staticmethod
+    def check_exists(path):
+        return True if exists(path) else False
+
     def create_default_archive_paths(self, archive_name):
         # Build the root path
         home = environ.get("HOME")
