@@ -39,6 +39,12 @@ config = {
     # Value chosen to be beyond reasonable file path lengths
     #   It is used for the file length sorting algorithm
     ConfigKey.FILE_NAME_LEN_MAX_VALUE: 9999,
+    # Maximum and minimum file sizes to hash, without a hash, a file will not
+    #   be acted on.
+    # For minimum size, 0 sets no size limit
+    # For maximum size, 0 sets no size limit
+    ConfigKey.FILE_SIZE_TO_HASH_MIN: 0,
+    ConfigKey.FILE_SIZE_TO_HASH_MAX: 0,
     # Available values : md5, sha1
     #   Determines which hashing algorithm to use
     ConfigKey.HASH_ALGO: 'md5',

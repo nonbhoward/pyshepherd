@@ -78,6 +78,9 @@ class FileManager:
 
     @staticmethod
     def create_default_path(default_path):
+        # TODO fix bug that doesn't create parent folders
+        #   also, this should call "create required folders" and pass
+        #   arguments to that
         if exists(default_path):
             print(f'Default folder {default_path} already exists, '
                   f'continuing..')

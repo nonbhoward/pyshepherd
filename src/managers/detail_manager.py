@@ -21,11 +21,11 @@ class DetailManager:
     # Archive
     @property
     def create_default_archive_paths(self):
-        return self._config[ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS]
+        return self.config[ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS]
 
     @property
     def create_default_source_paths(self):
-        return self._config[ConfigKey.CREATE_DEFAULT_SOURCE_PATHS]
+        return self.config[ConfigKey.CREATE_DEFAULT_SOURCE_PATHS]
 
     # Config
     @property
@@ -50,7 +50,15 @@ class DetailManager:
 
     @property
     def file_name_len_max_value(self):
-        return self._config[ConfigKey.FILE_NAME_LEN_MAX_VALUE]
+        return self.config[ConfigKey.FILE_NAME_LEN_MAX_VALUE]
+
+    @property
+    def file_size_limit_max(self):
+        return self.config[ConfigKey.FILE_SIZE_TO_HASH_MAX]
+
+    @property
+    def file_size_limit_min(self):
+        return self.config[ConfigKey.FILE_SIZE_TO_HASH_MIN]
 
     @property
     def hash_algo(self):
@@ -66,7 +74,7 @@ class DetailManager:
 
     @property
     def large_file_threshold(self):
-        return self._config[ConfigKey.LARGE_FILE_THRESHOLD]
+        return self.config[ConfigKey.LARGE_FILE_THRESHOLD]
 
     @property
     def network_check_count(self):
@@ -82,11 +90,11 @@ class DetailManager:
 
     @property
     def skip_soft_links(self):
-        return self._config[ConfigKey.SKIP_SOFT_LINKS]
+        return self.config[ConfigKey.SKIP_SOFT_LINKS]
 
     @property
     def sort_duplicate_hierarchy(self):
-        return self._config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
+        return self.config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
 
     # File Manager
     @property
@@ -113,24 +121,14 @@ class DetailManager:
     def default_unstage_folder(self):
         return self.config[ConfigKey.DEFAULT_UNSTAGE_FOLDER]
 
-    # Metadata
+    # Metadata, Archive
+    # All objects in this section should always include metadata dict as an
+    #   argument or return the archive_metadata, plus any additional keys
+    #   required to reach the data
     @staticmethod
     def archive_metadata_update(archive_metadata, file, metadata):
         archive_metadata[MetadataKey.UNSTAGE].update({
             file: metadata
-        })
-
-    @staticmethod
-    def duplicate_metadata_init(file):
-        duplicate_metadata_empty = {
-            file: {}
-        }
-        return duplicate_metadata_empty
-
-    @staticmethod
-    def duplicate_metadata_add_new_entry(duplicate_metadata, file):
-        duplicate_metadata.update({
-            file: {}
         })
 
     @property
@@ -199,7 +197,7 @@ class DetailManager:
 
     def update_archive_paths(self, archive_paths):
         try:
-            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
+            self.config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
                 ConfigKey.ARCHIVE_PATH: archive_paths[ConfigKey.ARCHIVE_PATH],
                 ConfigKey.UNSTAGE_PATH: archive_paths[ConfigKey.UNSTAGE_PATH]
             })
@@ -212,7 +210,7 @@ class DetailManager:
 
     def update_source_paths(self, archive_paths):
         try:
-            self._config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
+            self.config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
                 ConfigKey.GRAVEYARD_PATH: archive_paths[ConfigKey.GRAVEYARD_PATH],
                 ConfigKey.SOURCE_PATH: archive_paths[ConfigKey.SOURCE_PATH],
                 ConfigKey.STAGE_PATH: archive_paths[ConfigKey.STAGE_PATH],
@@ -221,10 +219,24 @@ class DetailManager:
             print(exc)
             raise exc
 
+    # Metadata, Duplicates
+    @staticmethod
+    def duplicate_metadata_init(file):
+        duplicate_metadata_empty = {
+            file: {}
+        }
+        return duplicate_metadata_empty
+
+    @staticmethod
+    def duplicate_metadata_add_new_entry(duplicate_metadata, file):
+        duplicate_metadata.update({
+            file: {}
+        })
+
     # Progress
     @property
     def progress_bar_increment(self):
-        return self._config[ConfigKey.PROGRESS_BAR_INCREMENT]
+        return self.config[ConfigKey.PROGRESS_BAR_INCREMENT]
 
     def terminal_dialog_padding(self):
-        return self._config[ConfigKey.TERMINAL_DIALOG_PADDING]
+        return self.config[ConfigKey.TERMINAL_DIALOG_PADDING]

@@ -58,6 +58,7 @@ def read_all_files(path: str, skip_soft_links: bool) -> dict:
                     # print(f'Skipping soft-link {file_path} ')
                     continue
                 file_stat = stat(file_path)
+                # TODO compare sizes against size limits
                 all_files[file_path] = {
                     'st_size': file_stat.st_size
                 }
