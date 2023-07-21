@@ -13,10 +13,10 @@ config = {
     ConfigKey.DEBUG: False,
     # MAIN VALUES ABOVE
 
-    # ARCHIVE MANAGER VALUES BELOW
-    # Archives is the collected archives that will be managed by the
-    #   archive manager class. Each archive has a label, and four
-    #   paths. The use of those paths is described in the archive
+    # COLLECTION MANAGER VALUES BELOW
+    # Collections are the collected directories that will be managed by the
+    #   collection manager class. Each collection has a label, and four
+    #   paths. The use of those paths is described in the collection
     #   manager class documentation
     ConfigKey.ARCHIVES: {
         ConfigKey.DEFAULT_ARCHIVE: {
@@ -33,7 +33,7 @@ config = {
     # Toggle if you want a default path structure to be made for archive
     #   paths which includes the archive and unstage path
     ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS: True,
-    # Toggle if you want a default path structure to be made for archive
+    # Toggle if you want a default path structure to be made for source
     #   paths which includes the graveyard, source, and stage path
     ConfigKey.CREATE_DEFAULT_SOURCE_PATHS: True,
     # Value chosen to be beyond reasonable file path lengths
@@ -69,7 +69,7 @@ config = {
     #   (closest to 'A') file being declared to be the parent file and all
     #   others declared to be duplicates
     ConfigKey.SORT_DUPLICATE_HIERARCHY: True,
-    # ARCHIVE MANAGER VALUES ABOVE
+    # COLLECTION MANAGER VALUES ABOVE
 
     # FILE MANAGER VALUES BELOW
     ConfigKey.DEFAULT_PARENT_FOLDER: '_PYSHEPHERD',

@@ -6,6 +6,7 @@ from types import MappingProxyType
 # imports, project
 from src.enumerations import ArchiveType
 from src.enumerations import ConfigKey
+from src.enumerations import FileAttribute
 from src.enumerations import MetadataKey
 
 
@@ -15,10 +16,10 @@ class DetailManager:
         print(f'Init {self.__class__.__name__}')
         self._config = config
         self._hasher_algo = None
-        self._mpt_archives = MappingProxyType(self.archives)
+        self._mpt_archives = MappingProxyType(self.collection)
         self.metadata = {}
 
-    # Archive
+    # Collection
     @property
     def create_default_archive_paths(self):
         return self.config[ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS]
@@ -29,8 +30,8 @@ class DetailManager:
 
     # Config
     @property
-    def archives(self):
-        return dict(self.config[ConfigKey.ARCHIVES])
+    def collection(self):
+        return dict(self.config[ConfigKey.COLLECTION])
 
     @property
     def buf_size(self):
@@ -121,56 +122,52 @@ class DetailManager:
     def default_unstage_folder(self):
         return self.config[ConfigKey.DEFAULT_UNSTAGE_FOLDER]
 
-    # Metadata, Archive
-    # All objects in this section should always include metadata dict as an
-    #   argument or return the archive_metadata, plus any additional keys
+    # Metadata, Collection
+    # All objects in this section should always include collection dict as an
+    #   argument or return the collection_metadata, plus any additional keys
     #   required to reach the data
     @staticmethod
-    def archive_metadata_update(archive_metadata, file, metadata):
-        archive_metadata[MetadataKey.UNSTAGE].update({
+    def collection_metadata_update(collection_metadata, file, metadata):
+        collection_metadata[MetadataKey.UNSTAGE].update({
             file: metadata
         })
 
+    @staticmethod
+    def get_collection_name_from(collection_metadata: dict) -> str:
+        return collection_metadata[MetadataKey.COLLECTION_NAME]
+
     @property
-    def get_empty_archive_metadata(self):
-        archive_metadata_empty = {
+    def get_empty_collection_metadata(self):
+        collection_metadata_empty = {
             MetadataKey.TYPE: ArchiveType.ARCHIVE,
             MetadataKey.UNSTAGE: {}
         }
-        return archive_metadata_empty
+        return collection_metadata_empty
 
     @staticmethod
-    def get_file_size_from(file_details):
-        return file_details['st_size']
+    def get_file_size_from(collection_metadata, file):
+        return collection_metadata[file][FileAttribute.ST_SIZE]
 
     @staticmethod
-    def get_parent_count_from(archive_metadata):
-        return len(archive_metadata[MetadataKey.UNSTAGE])
-
-    def get_path_archive(self, archive_name):
-        return self.archives[archive_name][ConfigKey.ARCHIVE_PATH]
-
-    def get_path_graveyard(self, archive_name):
-        return self.archives[archive_name][ConfigKey.GRAVEYARD_PATH]
-
-    def get_path_source(self, archive_name):
-        return self.archives[archive_name][ConfigKey.SOURCE_PATH]
-
-    def get_path_stage(self, archive_name):
-        return self.archives[archive_name][ConfigKey.STAGE_PATH]
-
-    def get_path_unstage(self, archive_name):
-        return self.archives[archive_name][ConfigKey.UNSTAGE_PATH]
+    def get_parent_count_from(collection_metadata):
+        return len(collection_metadata[MetadataKey.UNSTAGE])
 
     @staticmethod
-    def get_unstage_archive_from(archive_metadata):
-        return archive_metadata[MetadataKey.UNSTAGE]
+    def get_unstage_archive_from(collection_metadata):
+        return collection_metadata[MetadataKey.UNSTAGE]
 
     @staticmethod
     def get_unstage_file_dst_from(unstage_file_details):
         return unstage_file_details[
             'unstage_storage_details'][
             'unstage_file_destination']
+
+    @staticmethod
+    def init_collection_metadata(collection_name, collection_paths):
+        return {
+            MetadataKey.COLLECTION_NAME: collection_name,
+            MetadataKey.COLLECTION_PATHS: collection_paths
+        }
 
     def read_metadata(self, archive_name):
         return self.metadata[archive_name]
@@ -180,25 +177,25 @@ class DetailManager:
         return unstage_metadata[MetadataKey.TYPE]
 
     @staticmethod
-    def read_unstage(archive_metadata):
-        return archive_metadata[MetadataKey.UNSTAGE]
+    def read_unstage(collection_metadata):
+        return collection_metadata[MetadataKey.UNSTAGE]
 
     def set_metadata(self, archive_name, file_metadata):
         self.metadata[archive_name] = file_metadata
 
     @staticmethod
     def set_unstage_storage_details(
-            archive_metadata,
+            collection_metadata,
             original_file_dc,
             unstage_file_dc,
             unstage_storage_details):
-        archive_metadata['UNSTAGE'][original_file_dc][unstage_file_dc].update(
+        collection_metadata['UNSTAGE'][original_file_dc][unstage_file_dc].update(
             {'unstage_storage_details': unstage_storage_details})
 
     def update_archive_paths(self, archive_paths):
         try:
-            self.config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
-                ConfigKey.ARCHIVE_PATH: archive_paths[ConfigKey.ARCHIVE_PATH],
+            self.config[ConfigKey.COLLECTION][ConfigKey.DEFAULT_COLLECTION].update({
+                ConfigKey.ARCHIVE_PATH_LABEL: archive_paths[ConfigKey.ARCHIVE_PATH_LABEL],
                 ConfigKey.UNSTAGE_PATH: archive_paths[ConfigKey.UNSTAGE_PATH]
             })
         except Exception as exc:
@@ -210,7 +207,7 @@ class DetailManager:
 
     def update_source_paths(self, archive_paths):
         try:
-            self.config[ConfigKey.ARCHIVES][ConfigKey.DEFAULT_ARCHIVE].update({
+            self.config[ConfigKey.COLLECTION][ConfigKey.DEFAULT_COLLECTION].update({
                 ConfigKey.GRAVEYARD_PATH: archive_paths[ConfigKey.GRAVEYARD_PATH],
                 ConfigKey.SOURCE_PATH: archive_paths[ConfigKey.SOURCE_PATH],
                 ConfigKey.STAGE_PATH: archive_paths[ConfigKey.STAGE_PATH],
@@ -232,6 +229,39 @@ class DetailManager:
         duplicate_metadata.update({
             file: {}
         })
+
+    # Paths
+    @staticmethod
+    def get_path_archive(collection_name: str, config: dict) -> dict:
+        path = config[
+            ConfigKey.COLLECTION][
+            collection_name][
+            ConfigKey.ARCHIVE_PATH
+        ]
+        return {
+            ConfigKey.ARCHIVE_PATH: path
+        }
+
+    def get_path_graveyard(self, archive_name):
+        return self.collection[archive_name][ConfigKey.GRAVEYARD_PATH]
+
+    def get_path_source(self, archive_name):
+        return self.collection[archive_name][ConfigKey.SOURCE_PATH]
+
+    def get_path_stage(self, archive_name):
+        return self.collection[archive_name][ConfigKey.STAGE_PATH]
+
+    # Paths
+    @staticmethod
+    def get_path_unstage(collection_name: str, config: dict) -> dict:
+        path = config[
+            ConfigKey.COLLECTION][
+            collection_name][
+            ConfigKey.UNSTAGE_PATH
+        ]
+        return {
+            ConfigKey.UNSTAGE_PATH: path
+        }
 
     # Progress
     @property

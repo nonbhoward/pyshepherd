@@ -42,7 +42,7 @@ class FileManager:
         self.create_default_path(default_unstage_path)
 
         self.detail_manager.update_archive_paths({
-            ConfigKey.ARCHIVE_PATH: default_archive_path,
+            ConfigKey.ARCHIVE_PATH_LABEL: default_archive_path,
             ConfigKey.UNSTAGE_PATH: default_unstage_path
         })
 

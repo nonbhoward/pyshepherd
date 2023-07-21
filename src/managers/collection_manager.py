@@ -1,4 +1,4 @@
-# The manager of archives, the uniqueness of their files, the file metadata,
+# The manager of collections, the uniqueness of their files, the file metadata,
 #   and the files themselves
 
 # imports, python
@@ -9,16 +9,17 @@ import copy
 import sys
 
 # imports, project
+from src.enumerations import FileAttribute
 from src.enumerations import Progress
 from src.lib.lib import loading_dialog
-from src.lib.lib import read_all_files
+from src.lib.lib import read_all_files_and_update
 
 
-class ArchiveManager:
+class CollectionManager:
     """This class finds duplicate files by hashing their contents and comparing
         the hashes to the hashes of other files.
 
-    The archive manager works in a similar fashion to git.
+    The collection manager works in a similar fashion to git.
         The key locations (in order of timeline) are :
             "source file location" called "source"
             "staging file location" called "stage"
@@ -40,7 +41,8 @@ class ArchiveManager:
 
     Situation A for a source file (source ~> stage) :
         If the hash shows that the file is not a duplicate of an already
-        archived file, then the source file will be moved to the staging area.
+            archived file, then the source file will be moved to the staging
+            area.
         It is now a staged file. The user (or an automation script) can then
             choose where to put that file in the archive, as it has been shown
             to be unique.
@@ -66,7 +68,7 @@ class ArchiveManager:
 
     This manager has the ability to manage multiple archives, each archive
         will need to have a defined path to :
-            1. The archive itself
+            1. The archive
             2. The staging area (MUST BE EMPTY AT RUNTIME)
             3. A graveyard area (MUST BE EMPTY AT RUNTIME)
             3. The source file location
@@ -104,7 +106,7 @@ class ArchiveManager:
 
     def run(self) -> None:
         """
-        The primary actions of the archive manager. If the archive is
+        The primary actions of the collection manager. If the archive is
             found to be invalid for any reason then the source will not
             be parsed and instead the archive itself will be parsed and
             staged.
@@ -114,15 +116,20 @@ class ArchiveManager:
         """
         print(f'Running {self.__class__.__name__}')
 
-        # Iterate through each archive
-        for archive_name, paths in self.detail_manager.archives.items():
-            self.validate_paths(archive_name)
-            self.validate_archive(archive_name)
+        # Iterate through each collection
+        for collection_name, collection_paths in self.detail_manager.collection.items():
+            collection_metadata = \
+                self.detail_manager.init_collection_metadata(
+                    collection_name,
+                    collection_paths)
+
+            self.validate_paths(collection_metadata)
+            self.validate_archive(collection_metadata)
 
             # If there is metadata then some duplicates were found
-            if self.detail_manager.read_metadata(archive_name):
-                unstage_path = self.detail_manager.get_path_unstage(archive_name)
-                self.unstage_archive(archive_name, unstage_path)
+            collection_metadata = self.detail_manager.read_metadata(collection_metadata)
+            if collection_metadata:
+                self.unstage_archive(collection_metadata, collection_metadata)
             else:
                 # TODO features below are placeholder functions, at the moment
                 #   this program only evaluates the archive
@@ -130,61 +137,76 @@ class ArchiveManager:
                 # Validate source and staging paths
 
                 # Read files from the source path
-                source_filedata = self.parse_source(self.read_source(archive_name))
+                collection_metadata = self.parse_source(self.read_source(collection_metadata))
                 # Compare the source to the archive
                 # Stage unique source files
-                self.stage_unique(source_filedata)
+                self.stage_unique(collection_metadata)
 
-    def validate_paths(self, archive_name: str) -> None:
+    def validate_paths(self, collection_metadata: str) -> None:
         """Check that the paths are set in configuration, check that the
             paths the keys return exist. If the create default paths option
             is enabled and the paths are not set in the config, attempt to
             create the default paths.
 
-        :param archive_name: the name of the archive
+        :param collection_metadata: metadata about the collection files
         """
-        # Validate archive paths, create defaults if option enabled
-        archive_paths_set_in_config = self.validate_archive_paths(archive_name)
-        create_default_archive_paths = self.detail_manager.create_default_archive_paths
+        # Validate collection paths, create defaults if option enabled
+        archive_paths_set_in_config = \
+            self.validate_archive_paths(collection_metadata)
+        create_default_archive_paths = \
+            self.detail_manager.create_default_archive_paths
         if not archive_paths_set_in_config and create_default_archive_paths:
-            self.file_manager.create_default_archive_paths(archive_name)
+            self.file_manager.create_default_archive_paths(collection_metadata)
 
         # Validate source paths, create defaults if option enabled
-        source_paths_set_in_config = self.validate_source_paths(archive_name)
+        source_paths_set_in_config = self.validate_source_paths(collection_metadata)
         create_default_source_paths = self.detail_manager.create_default_source_paths
         if not source_paths_set_in_config and create_default_source_paths:
-            self.file_manager.create_default_source_paths(archive_name)
+            self.file_manager.create_default_source_paths(collection_metadata)
 
-    def validate_archive_paths(self, archive_name: str) -> bool:
+    def validate_archive_paths(self, collection_metadata: dict) -> bool:
         """Check that the paths are set in configuration, check that the
         paths the keys return exist.
 
-        :param archive_name: the name of the archive
+        :param collection_metadata: metadata about the collection files
         """
-        archive_paths_set = [
-            self.detail_manager.get_path_archive(archive_name),
-            self.detail_manager.get_path_unstage(archive_name)
+
+        # Read the collection name to read and update the metadata
+        collection_name = \
+            self.detail_manager.get_collection_name_from(collection_metadata)
+
+        # Convenience variable
+        config = self.detail_manager.config
+
+        # Read the paths associated with archiving
+        archive_paths_list = [
+            self.detail_manager.get_path_archive(collection_name, config),
+            self.detail_manager.get_path_unstage(collection_name, config)
         ]
 
         # Check that the defined paths exist
         archive_paths_exist = []
-        for archive_path in archive_paths_set:
-            archive_paths_exist.append(
-                self.file_manager.check_exists(archive_path))
-        if all(archive_paths_set) and all(archive_paths_exist):
+        for archive_path in archive_paths_list:
+            archive_paths_exist.append(self.file_manager.check_exists(archive_path))
+        if all(archive_paths_list) and all(archive_paths_exist):
+            # TODO
+            self.add_archive_paths_to(collection_metadata)
             return True
         return False
 
-    def validate_source_paths(self, archive_name: str) -> bool:
+    def add_archive_paths_to(self, collection_details):
+        pass
+
+    def validate_source_paths(self, collection_metadata: dict) -> bool:
         """Check that the paths are set in configuration, check that the
         paths the keys return exist.
 
-        :param archive_name: the name of the archive
+        :param collection_metadata: metadata about the file collection
         """
         source_paths_set = [
-            self.detail_manager.get_path_graveyard(archive_name),
-            self.detail_manager.get_path_source(archive_name),
-            self.detail_manager.get_path_stage(archive_name)
+            self.detail_manager.get_path_graveyard(collection_metadata),
+            self.detail_manager.get_path_source(collection_metadata),
+            self.detail_manager.get_path_stage(collection_metadata)
         ]
 
         # Check that the defined paths exist
@@ -193,49 +215,46 @@ class ArchiveManager:
             source_paths_exist.append(
                 self.file_manager.check_exists(source_path))
         if all(source_paths_set) and all(source_paths_exist):
+            # TODO
+            self.add_source_paths_to(collection_metadata)
             return True
         return False
 
-    def validate_archive(self, archive_name: str) -> None:
+    def validate_archive(self, collection_metadata: dict) -> None:
         """Validate the archive by reading file metadata. Populate the file
             metadata and resume
-        :arg, archive_name: a string that allows the archive manager to know
-            which archive is being validated.
+        :arg, collection_metadata: metadata about the file collection
         """
         print(f'validate_archive')
 
         # Get the path to the archive
-        path_archive = self.detail_manager.get_path_archive(archive_name)
+        # TODO consider if this should be saved into the file metadata earlier
+        path_archive = self.detail_manager.get_path_archive(collection_metadata)
         skip_soft_links = self.detail_manager.skip_soft_links
-        archive_files = read_all_files(path_archive, skip_soft_links)
+        collection_metadata = read_all_files_and_update(collection_metadata)
 
         # If no files are found
-        if not archive_files:
+        if not collection_metadata:
             print(f'Archive is empty or path is incorrect : {path_archive}')
             exit()
 
         # Read the files and populate the metadata instructions for unstaging
-        archive_metadata = \
-            self.archive_self_check(
-                self.generate_hashes(archive_files, self.detail_manager))
+        collection_metadata = \
+            self.archive_self_check(self.generate_hashes(collection_metadata))
 
         # Save the metadata instructions to the detail manager
-        self.detail_manager.set_metadata(archive_name, archive_metadata)
+        self.detail_manager.set_metadata(collection_metadata, collection_metadata)
 
-    def unstage_archive(self, archive_name: str, unstage_path: str) -> None:
-        """Read the populated file metadata, load it into the stage
+    def unstage_archive(self, collection_metadata: dict) -> None:
+        """Read the populated collection metadata, load it into the stage
             manager, and the stage manager will unstage the files.
-        :arg, archive_name: a string that allows the archive manager to know
-            which archive is being validated.
-        :arg, unstage_path: a string that points to the unstaging parent
-            folder, which is where unstaged files will be moved
+        :arg, collection_metadata: the dictionary containing the details of
+            what actions to take on each file
         """
         print(f'unstage_archive')
-
-        archive_metadata = \
-            self.detail_manager.read_metadata(archive_name)
-        self.stage_manager.load_metadata(archive_metadata, unstage_path)
-        self.stage_manager.unstage_files(archive_metadata, self.file_manager)
+        unstage_path = self.detail_manager.get_path_unstage(collection_metadata)
+        self.stage_manager.load_metadata(collection_metadata, unstage_path)
+        self.stage_manager.unstage_files(collection_metadata, self.file_manager)
 
     def parse_source(self, source_files):
         print(f'parse_source')  # TODO
@@ -250,48 +269,46 @@ class ArchiveManager:
         """Process the list of files and included hashes in order to find duplicate
             files.
         :arg, archive_hashes: a dict of hash values keyed by file path
-        :return, archive_metadata: an initialized metadata container for
+        :return, collection_metadata: an initialized metadata container for
             duplicate files with empty dictionaries initialized for each
             file
         """
         print(f'archive_self_check')
 
-        archive_metadata = self._get_archive_duplicates(archive_hashes)
+        collection_metadata = self._get_archive_duplicates(archive_hashes)
         if self.detail_manager.sort_duplicate_hierarchy:
-            archive_metadata = self._sort_unstage_hierarchy(archive_metadata)
-        if archive_metadata:
-            parent_count, children_count = self._count_duplicates(archive_metadata)
+            collection_metadata = self._sort_unstage_hierarchy(collection_metadata)
+        if collection_metadata:
+            parent_count, children_count = self._count_duplicates(collection_metadata)
             print(f'Archive invalid, {parent_count} parent file(s) found with '
                   f'{children_count} duplicate children')
-            return archive_metadata
+            return collection_metadata
 
-    def _get_archive_duplicates(self, archive_hashes: dict) -> dict:
-        """Find non-unique files in the archive_hashes dictionary
-        :arg, archive_hashes: a dictionary of hash values keyed by the file path
-            used to generate them
-        :returns, archive_metadata: data about the duplicate files that will help
-            to relocate them out of the archive
+    def _get_archive_duplicates(self, archive_metadata: dict) -> dict:
+        """Find non-unique files in the archive_metadata dictionary
+        :arg, archive_metadata: metadata about the file collection
+        :returns, collection_metadata: data about the duplicate files that
+            will help to relocate them out of the archive
         """
         print(f'_get_archive_duplicates')
 
-        archive_metadata = self.detail_manager.get_empty_archive_metadata
-        archive_hashes_dc = copy.deepcopy(archive_hashes)
+        archive_metadata_dc = copy.deepcopy(archive_metadata)
         found_duplicates = []
         # While dictionary has files
-        while list(archive_hashes_dc.keys()):
+        while list(archive_metadata_dc.keys()):
             # This flag is used to escape the external for loop after a
             #   duplicate file is found
 
             # Iterate over a copy of the archive against another copy
-            for a_file, a_hash in archive_hashes_dc.items():
+            for a_file, a_hash in archive_metadata_dc.items():
 
                 if a_file in found_duplicates:
-                    del archive_hashes_dc[a_file]  # Prevent infinite loop
+                    del archive_metadata_dc[a_file]  # Prevent infinite loop
                     break  # This file is already identified as a duplicate
 
                 # Init duplicate tracking for this a_file
                 duplicate_metadata = {}  # Duplicates for this file
-                for aa_file, aa_hash in archive_hashes.items():
+                for aa_file, aa_hash in archive_metadata.items():
 
                     if a_file == aa_file:
                         continue  # Do not compare a file with itself
@@ -311,31 +328,31 @@ class ArchiveManager:
                                 aa_file
                             )
 
-                        self.detail_manager.archive_metadata_update(
+                        self.detail_manager.collection_metadata_update(
                             archive_metadata,
                             a_file,
                             duplicate_metadata
                         )
 
                 # The internal loop has concluded, discard this value
-                del archive_hashes_dc[a_file]
+                del archive_metadata_dc[a_file]
                 break  # Force restart of the for loop with new dict
 
         return archive_metadata
 
-    def _sort_unstage_hierarchy(self, archive_details):
+    def _sort_unstage_hierarchy(self, collection_metadata):
         """Extracts the original file and duplicate files, reads their
             length, and declares the shortest file name to be
             the original. If more than one file matches the length of the
             shortest file, then sort them alphabetically and declare the
             'first' file to be the new parent. This is obviously not
             necessary, so it can be skipped in the configuration.
-        :arg, archive_details: metadata about the archive duplicates,
+        :arg, collection_metadata: metadata about the archive duplicates,
             containing empty containers for each duplicate file
         """
         print(f'_sort_unstage_hierarchy')
 
-        unstage = self.detail_manager.read_unstage(archive_details)
+        unstage = self.detail_manager.read_unstage(collection_metadata)
         unstage_dc = copy.deepcopy(unstage)
         for parent_file, child_files in unstage_dc.items():
 
@@ -387,34 +404,35 @@ class ArchiveManager:
                 file: {} for file in files_sorted[1:]
             }
 
-        return archive_details
+        return collection_metadata
 
-    def generate_hashes(self, archive_files: dict, detail_manager) -> dict:
+    def generate_hashes(self, archive_metadata: dict) -> dict:
         """Given a list of files, generate hashes for each
         :arg, archive_files, a dict of file sizes keyed by file path
         :arg, detail_manager, the container for the hashing function
         """
         print(f'generate_hashes')
 
-        archive_hashes = {}
         hash_count = 0
         hash_mod = 100
-        hashes_needed = len(archive_files)
-        for file, file_details in archive_files.items():
-            file_size = self.detail_manager.get_file_size_from(file_details)
+        hashes_needed = len(archive_metadata)
+        archive_metadata_dc = copy.deepcopy(archive_metadata)
+        for file_dc, file_details_dc in archive_metadata_dc.items():
+            file_size = \
+                self.detail_manager.get_file_size_from(archive_metadata, file_dc)
             if not hash_count % hash_mod:
                 print(f'Generated {hash_count} of {hashes_needed}..')
-            archive_hashes.update({
-                file: self.generate_hash(
-                    file,
+            archive_metadata[file_dc].update({
+                FileAttribute.HASH: self.generate_hash(
+                    file_dc,
                     file_size,
-                    detail_manager,
+                    self.detail_manager,
                     hash_count,
                     hashes_needed
                 )
             })
             hash_count += 1
-        return archive_hashes
+        return archive_metadata
 
     def generate_hash(self,
                       archive_file: str,

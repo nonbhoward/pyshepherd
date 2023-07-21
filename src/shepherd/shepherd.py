@@ -4,7 +4,7 @@ class Shepherd:
     def __init__(
             self,
             config,
-            archive_manager,
+            collection_manager,
             detail_manager,
             file_manager,
             stage_manager,
@@ -16,7 +16,7 @@ class Shepherd:
         )
         self._debug = detail_manager.debug
         self._system_manager = system_manager(detail_manager)
-        self._archive_manager = archive_manager(
+        self._archive_manager = collection_manager(
             detail_manager,
             file_manager,
             stage_manager

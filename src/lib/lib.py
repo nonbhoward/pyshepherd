@@ -6,6 +6,7 @@ from os import walk
 from os.path import exists
 from os.path import islink
 from src.enumerations import Command
+from src.enumerations import FileAttribute
 import shutil
 import sys
 
@@ -41,7 +42,7 @@ def convert_filepath_to_soft_link_name(file_path: str) -> str:
     return soft_link_name
 
 
-def read_all_files(path: str, skip_soft_links: bool) -> dict:
+def read_all_files_and_update(path: str, skip_soft_links: bool) -> dict:
     """Recursively fetch all files in a path
 
     :param path: the path to recursively crawl
@@ -60,7 +61,7 @@ def read_all_files(path: str, skip_soft_links: bool) -> dict:
                 file_stat = stat(file_path)
                 # TODO compare sizes against size limits
                 all_files[file_path] = {
-                    'st_size': file_stat.st_size
+                    FileAttribute.ST_SIZE: file_stat.st_size
                 }
             else:
                 print(f'Error, file does not exist : {file_path}')
