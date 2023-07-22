@@ -27,6 +27,7 @@ def convert_filepath_to_filename(file_path: str) -> str:
     :param file_path: the path to a file
     :return: the new file name
     """
+    # TODO bug, sometimes makes filenames too long for system
     file_name = file_path.replace('/', '_')[1:]
     return file_name
 
