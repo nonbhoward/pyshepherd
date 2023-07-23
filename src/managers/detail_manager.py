@@ -16,10 +16,18 @@ class DetailManager:
         print(f'Init {self.__class__.__name__}')
         self._config = config
         self._hasher_algo = None
-        self._mpt_archives = MappingProxyType(self.collection)
+        self._collection_metadata = None
         self.metadata = {}
 
     # Collection
+    @property
+    def collection_metadata(self):
+        return self._collection_metadata
+
+    @collection_metadata.setter
+    def collection_metadata(self, value):
+        self._collection_metadata = value
+
     @property
     def create_default_archive_paths(self):
         return self.config[ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS]
@@ -30,8 +38,8 @@ class DetailManager:
 
     # Config
     @property
-    def collection(self):
-        return dict(self.config[ConfigKey.COLLECTION])
+    def collection_config(self):
+        return self.config[ConfigKey.COLLECTION]
 
     @property
     def buf_size(self):
@@ -97,7 +105,7 @@ class DetailManager:
     def sort_duplicate_hierarchy(self):
         return self.config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
 
-    # File Manager
+    # FILES
     @property
     def default_parent_folder(self):
         return self.config[ConfigKey.DEFAULT_PARENT_FOLDER]
@@ -122,19 +130,18 @@ class DetailManager:
     def default_unstage_folder(self):
         return self.config[ConfigKey.DEFAULT_UNSTAGE_FOLDER]
 
-    # Metadata, Collection
+    # METADATA
     # All objects in this section should always include collection dict as an
     #   argument or return the collection_metadata, plus any additional keys
     #   required to reach the data
-    @staticmethod
-    def collection_metadata_update(collection_metadata, file, metadata):
+    def collection_metadata_update(self, collection_metadata, file, metadata):
         collection_metadata[MetadataKey.UNSTAGE].update({
             file: metadata
         })
+        self.collection_metadata = collection_metadata
 
-    @staticmethod
-    def get_collection_name_from(collection_metadata: dict) -> str:
-        return collection_metadata[MetadataKey.COLLECTION_NAME]
+    def get_archive_file_metadata(self, collection_name, file_type):
+        return self.collection_metadata[collection_name]['FILES'][file_type]
 
     @property
     def get_empty_collection_metadata(self):
@@ -144,13 +151,16 @@ class DetailManager:
         }
         return collection_metadata_empty
 
+    def get_files(self, collection_name, file_type):
+        return self.collection_metadata[collection_name]['FILES'][file_type]
+
     @staticmethod
     def get_file_size_from(collection_metadata, file):
         return collection_metadata[file][FileAttribute.ST_SIZE]
 
     @staticmethod
-    def get_parent_count_from(collection_metadata):
-        return len(collection_metadata[MetadataKey.UNSTAGE])
+    def get_parent_count_from(duplicate_metadata):
+        return len(duplicate_metadata)
 
     @staticmethod
     def get_unstage_archive_from(collection_metadata):
@@ -162,26 +172,46 @@ class DetailManager:
             'unstage_storage_details'][
             'unstage_file_destination']
 
-    @staticmethod
-    def init_collection_metadata(collection_name, collection_paths):
-        return {
-            MetadataKey.COLLECTION_NAME: collection_name,
-            MetadataKey.COLLECTION_PATHS: collection_paths
+    def init_collection_metadata(self, collection_name, collection_paths):
+        self.collection_metadata = {
+            collection_name: {
+                MetadataKey.COLLECTION_PATHS: collection_paths
+            }
         }
 
-    def read_metadata(self, archive_name):
-        return self.metadata[archive_name]
+    def read_metadata(self, collection_name, file_type):
+        return self.collection_metadata[collection_name]['FILES'][file_type]
 
     @staticmethod
     def read_metadata_type(unstage_metadata):
         return unstage_metadata[MetadataKey.TYPE]
 
     @staticmethod
-    def read_unstage(collection_metadata):
-        return collection_metadata[MetadataKey.UNSTAGE]
+    def read_unstage(duplicate_metadata):
+        # TODO delete me
+        return duplicate_metadata
 
-    def set_metadata(self, archive_name, file_metadata):
-        self.metadata[archive_name] = file_metadata
+    def init_file_metadata(self, collection_name, files_at_path, path_type):
+        if 'FILES' not in self.collection_metadata[collection_name]:
+            self.collection_metadata[collection_name]['FILES'] = {}
+        if path_type == 'ARCHIVE':
+            self.collection_metadata[collection_name]['FILES'].update({
+                path_type: files_at_path
+            })
+        elif path_type == 'SOURCE':
+            self.collection_metadata[collection_name]['FILES'].update({
+                path_type: files_at_path
+            })
+        else:
+            raise RuntimeError(f'Unknown path_type : {path_type}')
+
+    def set_duplicate_metadata(self, collection_name, duplicate_metadata):
+        collection_file_metadata = \
+            self.collection_metadata[collection_name]['FILES']['ARCHIVE']
+        for parent_file, children_files in duplicate_metadata.items():
+            collection_file_metadata[parent_file].update({
+                'duplicates': children_files
+            })
 
     @staticmethod
     def set_unstage_storage_details(
@@ -202,6 +232,13 @@ class DetailManager:
             print(exc)
             raise exc
 
+    def update_file_hashes(self, collection_name, file_type: str, file_hashes: dict) -> None:
+        files = self.collection_metadata[collection_name]['FILES'][file_type]
+        for file, file_details in files.items():
+            file_details.update({
+                'HASH': file_hashes[file]['HASH']
+            })
+
     def update_metadata(self, archive_name, file_metadata):
         self.metadata[archive_name].update({file_metadata})
 
@@ -218,7 +255,7 @@ class DetailManager:
 
     # Metadata, Duplicates
     @staticmethod
-    def duplicate_metadata_init(file):
+    def duplicate_metadata_for_file_init(file):
         duplicate_metadata_empty = {
             file: {}
         }
@@ -226,42 +263,54 @@ class DetailManager:
 
     @staticmethod
     def duplicate_metadata_add_new_entry(duplicate_metadata, file):
+        # TODO delete
         duplicate_metadata.update({
             file: {}
         })
 
     # Paths
-    @staticmethod
-    def get_path_archive(collection_name: str, config: dict) -> dict:
-        path = config[
+    def get_collection(self, collection_name: str) -> dict:
+        return self.collection_config[collection_name]
+
+    def get_path_archive(self, collection_name) -> dict:
+        path = self.config[
             ConfigKey.COLLECTION][
             collection_name][
             ConfigKey.ARCHIVE_PATH
         ]
-        return {
-            ConfigKey.ARCHIVE_PATH: path
-        }
+        return path
 
-    def get_path_graveyard(self, archive_name):
-        return self.collection[archive_name][ConfigKey.GRAVEYARD_PATH]
+    def get_path_graveyard(self, collection_name) -> dict:
+        path = self.config[
+            ConfigKey.COLLECTION][
+            collection_name][
+            ConfigKey.GRAVEYARD_PATH
+        ]
+        return path
 
-    def get_path_source(self, archive_name):
-        return self.collection[archive_name][ConfigKey.SOURCE_PATH]
+    def get_path_source(self, collection_name) -> dict:
+        path = self.config[
+            ConfigKey.COLLECTION][
+            collection_name][
+            ConfigKey.SOURCE_PATH
+        ]
+        return path
 
-    def get_path_stage(self, archive_name):
-        return self.collection[archive_name][ConfigKey.STAGE_PATH]
+    def get_path_stage(self, collection_name) -> dict:
+        path = self.config[
+            ConfigKey.COLLECTION][
+            collection_name][
+            ConfigKey.STAGE_PATH
+        ]
+        return path
 
-    # Paths
-    @staticmethod
-    def get_path_unstage(collection_name: str, config: dict) -> dict:
-        path = config[
+    def get_path_unstage(self, collection_name) -> dict:
+        path = self.config[
             ConfigKey.COLLECTION][
             collection_name][
             ConfigKey.UNSTAGE_PATH
         ]
-        return {
-            ConfigKey.UNSTAGE_PATH: path
-        }
+        return path
 
     # Progress
     @property

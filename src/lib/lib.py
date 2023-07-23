@@ -42,7 +42,7 @@ def convert_filepath_to_soft_link_name(file_path: str) -> str:
     return soft_link_name
 
 
-def read_all_files_and_update(path: str, skip_soft_links: bool) -> dict:
+def read_all_files(path: str, skip_soft_links: bool) -> dict:
     """Recursively fetch all files in a path
 
     :param path: the path to recursively crawl
