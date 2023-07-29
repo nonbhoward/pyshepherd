@@ -92,17 +92,17 @@ class FileManager:
                       f'{default_path}, {exc}')
 
     @staticmethod
-    def create_required_folders(unstage_file_details: dict) -> None:
+    def create_required_folders(duplicate_details: dict) -> None:
         """Recursively create all parent folders up to and including the parent
             directory being requested
 
-        :param unstage_file_details: metadata used to create the folders
+        :param duplicate_details: metadata used to create the folders
         """
-        unstage_parent_folder = \
-            str(unstage_file_details[
-                    'unstage_storage_details'][
-                    'unstage_parent_folder'])
+        unstage_parent_folder = str(duplicate_details['unstage_parent_folder'])
+
+        # Convenience
         udes = unstage_destination_elements = unstage_parent_folder.split('/')
+
         progressive_path = ''
         for ude in udes:
             progressive_path += ude + '/' if ude else '/'
@@ -129,17 +129,17 @@ class FileManager:
             raise exc
 
     def move_duplicate_file(self,
-                            unstage_file: str,
-                            unstage_file_details: dict) -> None:
+                            duplicate_file: str,
+                            duplicate_metadata: dict) -> None:
         """Move a file
 
-        :param unstage_file: file source
-        :param unstage_file_details: file destination details
+        :param duplicate_file: file source
+        :param duplicate_metadata: file destination details
         """
         unstage_file_dst = \
-            self.detail_manager.get_unstage_file_dst_from(unstage_file_details)
+            self.detail_manager.get_unstage_file_dst_from(duplicate_metadata)
         self.move_file(
-            src=unstage_file,
+            src=duplicate_file,
             dst=unstage_file_dst
         )
 

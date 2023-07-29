@@ -29,6 +29,7 @@ def convert_filepath_to_filename(file_path: str) -> str:
     :return: the new file name
     """
     file_name = file_path.replace('/', '_')[1:]
+    # TODO, bug, detect and strip file names with repeating patterns
     return file_name
 
 

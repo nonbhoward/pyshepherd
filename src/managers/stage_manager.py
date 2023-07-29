@@ -22,97 +22,108 @@ class StageManager:
         print(f'Init {self.__class__.__name__}')
         self.detail_manager = detail_manager
 
-    def load_metadata(self, archive_metadata: dict, unstage_path: str) -> None:
+    def load_metadata(self,
+                      collection_metadata: dict,
+                      unstage_path: str,
+                      file_type: str) -> None:
         """Populate the staging and unstaging metadata
 
-        :param archive_metadata: dictionary containing details about the archive
+        :param collection_metadata: the collection name
         :param unstage_path: path to the unstaging area
+        :file_type: the type of archive to load SOURCE or ARCHIVE
         """
         print(f'load_metadata')
-        archive_type = self.detail_manager.read_metadata_type(archive_metadata)
-        if archive_type == ArchiveType.ARCHIVE:
-            self.populate_unstage_metadata(archive_metadata, unstage_path)
+        if file_type == ArchiveType.ARCHIVE:
+            self.populate_unstage_metadata(collection_metadata, unstage_path)
 
     def populate_unstage_metadata(self,
-                                  archive_metadata: dict,
+                                  collection_metadata: dict,
                                   unstage_path: str) -> None:
         """Update the unstaging metadata
 
-        :param archive_metadata: dictionary containing details about the archive
+        :param collection_metadata: dictionary containing details about the archive
         :param unstage_path: path to the unstaging area
         """
         print(f'populate_unstage_metadata')
-        self._update_with_unstaging_destinations(archive_metadata, unstage_path)
-        self._update_with_soft_links(archive_metadata, unstage_path)
+        self._update_with_unstaging_destinations(collection_metadata, unstage_path)
+        self._update_with_soft_links(collection_metadata, unstage_path)
 
     def _update_with_unstaging_destinations(self,
-                                            archive_metadata: dict,
+                                            collection_metadata: dict,
                                             unstage_path: str) -> None:
         """Build the unstaging destinations for each file to be unstaged
 
-        :param archive_metadata: dictionary containing details about the archive
+        :param collection_metadata: dictionary containing details about the collection
         :param unstage_path: path to the unstaging area
         """
         print(f'_update_with_unstaging_destinations')
         unstage_metadata_dc = copy.deepcopy(
-            self.detail_manager.read_unstage(archive_metadata)
+            self.detail_manager.read_unstage(collection_metadata)
         )
-        for original_file_dc, unstage_details_dc in unstage_metadata_dc.items():
-            for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
+        for original_file_dc, original_file_metadata_dc in unstage_metadata_dc.items():
+            if 'duplicates' not in original_file_metadata_dc:
+                continue  # items without duplicates are unprocessed
+            duplicate_metadata_dc = original_file_metadata_dc['duplicates']
+            for duplicate_file_dc, duplicate_file_metadata in duplicate_metadata_dc.items():
                 unstage_storage_details = \
                     _build_unstage_storage_details(
                         original_file_dc,
-                        unstage_file_dc,
-                        unstage_path)
+                        duplicate_file_dc,
+                        unstage_path
+                    )
+
                 self.detail_manager.set_unstage_storage_details(
-                    archive_metadata,
+                    collection_metadata,
                     original_file_dc,
-                    unstage_file_dc,
+                    duplicate_file_dc,
                     unstage_storage_details
                 )
 
     def _update_with_soft_links(self,
-                                archive_metadata: dict,
+                                collection_metadata: dict,
                                 unstage_path: str) -> None:
         """Build the soft link destinations for each file to be unstaged
 
-        :param archive_metadata: dictionary containing details about the archive
+        :param collection_metadata: dictionary containing details about the archive
         :param unstage_path: path to the unstaging area
         """
         print(f'_update_with_soft_links')
-        archive_metadata_dc = copy.deepcopy(archive_metadata)
-        unstage_metadata_dc = \
-            self.detail_manager.read_unstage_from(archive_metadata_dc)
-        for original_file_dc, unstage_details_dc in unstage_metadata_dc.items():
-            for unstage_file_dc, unstage_file_details_dc in unstage_details_dc.items():
+        collection_metadata_dc = copy.deepcopy(collection_metadata)
+        for original_file_dc, original_file_metadata_dc in collection_metadata_dc.items():
+            if 'duplicates' not in original_file_metadata_dc:
+                continue  # items without duplicates are unprocessed
+            duplicate_metadata_dc = original_file_metadata_dc['duplicates']
+            for duplicate_file_dc, duplicate_file_metadata in duplicate_metadata_dc.items():
                 soft_link_command = _build_soft_link_command(
                     original_file_dc,
                     unstage_path
                 )
-                archive_metadata['UNSTAGE'][
-                    original_file_dc][
-                    unstage_file_dc].update({
-                        'soft_link_command': soft_link_command})
 
-    def stage_files(self):
-        print()  # TODO
+                self.detail_manager.set_soft_link_command(
+                    collection_metadata,
+                    original_file_dc,
+                    duplicate_file_dc,
+                    soft_link_command
+                )
 
     @staticmethod
-    def unstage_files(archive_metadata, file_manager):
+    def unstage_files(collection_metadata, file_manager):
         """Execute the unstaging action, moving files from the archive to their
             respective unstaging destination
 
-        :param archive_metadata: dictionary containing details about the archive
-        :param unstage_path: path to the unstaging area
+        :param collection_metadata: dictionary containing details about the archive
+        :param file_manager: the file manager class
         """
         print(f'unstage_files')
-        unstage_metadata = archive_metadata['UNSTAGE']
-        for original_file, unstage_details in unstage_metadata.items():
-            for unstage_file, unstage_file_details in unstage_details.items():
-                file_manager.create_required_folders(unstage_file_details)
-                soft_link_command = unstage_file_details['soft_link_command']
+        for original_file, duplicate_metadata in collection_metadata.items():
+            if 'duplicates' not in duplicate_metadata:
+                continue  # no duplicates for this file
+            duplicate_details = duplicate_metadata['duplicates']
+            for duplicate_file, duplicate_details in duplicate_details.items():
+                file_manager.create_required_folders(duplicate_details)
+                soft_link_command = duplicate_details['soft_link_command']
                 file_manager.create_soft_link(soft_link_command)
-                file_manager.move_duplicate_file(unstage_file, unstage_file_details)
+                file_manager.move_duplicate_file(duplicate_file, duplicate_metadata)
 
 
 def _build_unstage_storage_details(original: str,
@@ -144,6 +155,6 @@ def _build_soft_link_command(original: str, unstage_path: str) -> list:
     :param unstage_path: the unstaging path
     """
     soft_link_name = convert_filepath_to_soft_link_name(original)
-    soft_link_label = str(Path(unstage_path, soft_link_name, soft_link_name))
+    soft_link_label = str(Path(unstage_path, soft_link_name))
     soft_link_command = build_soft_link_command(original, soft_link_label)
     return soft_link_command

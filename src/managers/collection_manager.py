@@ -121,10 +121,11 @@ class CollectionManager:
             self.validate_archive(collection_name)
 
             # If there is metadata then some duplicates were found
-            archive_metadata = self.dm.read_metadata(collection_name, 'ARCHIVE')
+            collection_archive_file_metadata = (
+                self.dm.read_metadata(collection_name, 'ARCHIVE'))
             # TODO bug, archive metadata is never empty since files are always present
-            if archive_metadata:
-                self.unstage_archive(archive_metadata, archive_metadata)
+            if collection_archive_file_metadata:
+                self.unstage_archive(collection_name)
             else:
                 pass  # TODO, handle a source
 
@@ -134,14 +135,16 @@ class CollectionManager:
             self.validate_collection_paths(collection_name, 'ARCHIVE')
         create_default_archive_paths = self.dm.create_default_archive_paths
         if not archive_paths_set_in_config_exist and create_default_archive_paths:
-            self.file_manager.create_default_archive_paths(self.dm.collection_metadata)
+            self.file_manager.create_default_archive_paths(
+                self.dm.collection_metadata)
 
         # Validate source paths, create defaults if option enabled
         source_paths_set_in_config_exist = \
             self.validate_collection_paths(collection_name, 'SOURCE')
         create_default_source_paths = self.dm.create_default_source_paths
         if not source_paths_set_in_config_exist and create_default_source_paths:
-            self.file_manager.create_default_source_paths(self.dm.collection_metadata)
+            self.file_manager.create_default_source_paths(
+                self.dm.collection_metadata)
 
     def validate_collection_paths(self, collection_name, paths_type) -> bool:
         # Read the paths associated with the path type
@@ -199,10 +202,16 @@ class CollectionManager:
         # Save the metadata instructions to the detail manager
         self.dm.set_duplicate_metadata(collection_name, duplicate_metadata)
 
-    def unstage_archive(self, collection_metadata: dict) -> None:
+    def unstage_archive(self, collection_name: str) -> None:
         print(f'unstage_archive')
-        unstage_path = self.dm.get_path_unstage(collection_metadata)
-        self.stage_manager.load_metadata(collection_metadata, unstage_path)
+        unstage_path = self.dm.get_path_unstage(collection_name)
+        collection_metadata = \
+            self.dm.get_collection_metadata(collection_name, file_type='ARCHIVE')
+        self.stage_manager.load_metadata(
+            collection_metadata,
+            unstage_path,
+            file_type='ARCHIVE'
+        )
         self.stage_manager.unstage_files(collection_metadata, self.file_manager)
 
     def parse_source(self, source_files):

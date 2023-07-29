@@ -134,22 +134,16 @@ class DetailManager:
     # All objects in this section should always include collection dict as an
     #   argument or return the collection_metadata, plus any additional keys
     #   required to reach the data
-    def collection_metadata_update(self, collection_metadata, file, metadata):
-        collection_metadata[MetadataKey.UNSTAGE].update({
-            file: metadata
-        })
-        self.collection_metadata = collection_metadata
 
     def get_archive_file_metadata(self, collection_name, file_type):
         return self.collection_metadata[collection_name]['FILES'][file_type]
 
-    @property
-    def get_empty_collection_metadata(self):
-        collection_metadata_empty = {
-            MetadataKey.TYPE: ArchiveType.ARCHIVE,
-            MetadataKey.UNSTAGE: {}
-        }
-        return collection_metadata_empty
+    def get_collection_metadata(self, collection_name: str, file_type: str) -> dict:
+        if file_type == 'ARCHIVE':
+            return self.collection_metadata[collection_name]['FILES']['ARCHIVE']
+
+    def get_duplicate_metadata(self, collection_metadata: dict) -> dict:
+        pass
 
     def get_files(self, collection_name, file_type):
         return self.collection_metadata[collection_name]['FILES'][file_type]
@@ -163,14 +157,11 @@ class DetailManager:
         return len(duplicate_metadata)
 
     @staticmethod
-    def get_unstage_archive_from(collection_metadata):
-        return collection_metadata[MetadataKey.UNSTAGE]
-
-    @staticmethod
     def get_unstage_file_dst_from(unstage_file_details):
-        return unstage_file_details[
-            'unstage_storage_details'][
-            'unstage_file_destination']
+        return unstage_file_details['unstage_file_destination']
+
+    def get_unstage_metadata(self, collection_metadata: dict) -> dict:
+        pass
 
     def init_collection_metadata(self, collection_name, collection_paths):
         self.collection_metadata = {
@@ -214,13 +205,20 @@ class DetailManager:
             })
 
     @staticmethod
+    def set_soft_link_command(collection_metadata,
+                              original,
+                              duplicate,
+                              command):
+        collection_metadata[original]['duplicates'][duplicate]['soft_link_command'] = command
+
+    @staticmethod
     def set_unstage_storage_details(
             collection_metadata,
             original_file_dc,
             unstage_file_dc,
             unstage_storage_details):
-        collection_metadata['UNSTAGE'][original_file_dc][unstage_file_dc].update(
-            {'unstage_storage_details': unstage_storage_details})
+        collection_metadata[original_file_dc]['duplicates'][unstage_file_dc].update(
+            unstage_storage_details)
 
     def update_archive_paths(self, archive_paths):
         try:
@@ -257,7 +255,9 @@ class DetailManager:
     @staticmethod
     def duplicate_metadata_for_file_init(file):
         duplicate_metadata_empty = {
-            file: {}
+            file: {
+                'name': file
+            }
         }
         return duplicate_metadata_empty
 
