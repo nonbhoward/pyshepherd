@@ -1,10 +1,6 @@
 # Manage details with attributes instead of manually manipulating collections
 
-# imports, python
-from types import MappingProxyType
-
 # imports, project
-from src.enumerations import ArchiveType
 from src.enumerations import ConfigKey
 from src.enumerations import FileAttribute
 from src.enumerations import MetadataKey

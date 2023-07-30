@@ -2,7 +2,6 @@
 
 # imports python
 from os import environ
-from os import listdir
 from os import mkdir
 from os.path import exists
 from pathlib import Path
