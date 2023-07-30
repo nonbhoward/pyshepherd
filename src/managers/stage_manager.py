@@ -10,6 +10,7 @@ from src.lib.lib import convert_filepath_to_filename
 from src.lib.lib import convert_filepath_to_soft_link_name
 from src.enumerations import CollectionType
 from src.enumerations import Class
+from src.enumerations import MetadataKey as mk
 
 
 class StageManager:
@@ -61,9 +62,9 @@ class StageManager:
         print(f'_update_with_unstaging_destinations')
         unstage_metadata_dc = copy.deepcopy(collection_metadata)
         for original_file_dc, original_file_metadata_dc in unstage_metadata_dc.items():
-            if 'duplicates' not in original_file_metadata_dc:
+            if mk.DUPLICATES not in original_file_metadata_dc:
                 continue  # items without duplicates are unprocessed
-            duplicate_metadata_dc = original_file_metadata_dc['duplicates']
+            duplicate_metadata_dc = original_file_metadata_dc[mk.DUPLICATES]
             for _, duplicate_file_metadata in duplicate_metadata_dc.items():
                 unstage_storage_details = \
                     _build_unstage_storage_details(
@@ -88,9 +89,9 @@ class StageManager:
         print(f'_update_with_soft_links')
         collection_metadata_dc = copy.deepcopy(collection_metadata)
         for original_file_dc, original_file_metadata_dc in collection_metadata_dc.items():
-            if 'duplicates' not in original_file_metadata_dc:
+            if mk.DUPLICATES not in original_file_metadata_dc:
                 continue  # items without duplicates are unprocessed
-            duplicate_metadata_dc = original_file_metadata_dc['duplicates']
+            duplicate_metadata_dc = original_file_metadata_dc[mk.DUPLICATES]
             for duplicate_file_dc, duplicate_file_metadata in duplicate_metadata_dc.items():
                 soft_link_command = _build_soft_link_command(
                     original_file_dc,
@@ -113,13 +114,13 @@ class StageManager:
         """
         print(f'unstage_files')
         for original_file, duplicate_metadata in collection_metadata.items():
-            if 'duplicates' not in duplicate_metadata:
+            if mk.DUPLICATES not in duplicate_metadata:
                 continue  # no duplicates for this file
-            duplicate_details = duplicate_metadata['duplicates']
+            duplicate_details = duplicate_metadata[mk.DUPLICATES]
             for duplicate_file, duplicate_details in duplicate_details.items():
-                duplicate_unstage_parent_folder = duplicate_details['unstage_parent_folder']
+                duplicate_unstage_parent_folder = duplicate_details[mk.UNSTAGE_ROOT]
                 file_manager.create_required_folders(duplicate_unstage_parent_folder)
-                soft_link_command = duplicate_details['soft_link_command']
+                soft_link_command = duplicate_details[mk.SOFT_LINK_COMMAND]
                 file_manager.create_soft_link(soft_link_command)
                 file_manager.move_duplicate_file(duplicate_details)
 
@@ -133,16 +134,16 @@ def _build_unstage_storage_details(
     :param unstage_path: the unstaging path
     :return:
     """
-    original = duplicate_file_metadata['original']
-    unstage_file = duplicate_file_metadata['name']
+    original = duplicate_file_metadata[mk.ORIGINAL]
+    unstage_file = duplicate_file_metadata[mk.NAME]
     original_filepath_as_name = convert_filepath_to_filename(original)
     unstage_filepath_as_name = convert_filepath_to_filename(unstage_file)
     unstage_parent_folder = str(Path(unstage_path, original_filepath_as_name))
     unstage_file_destination = \
         str(Path(unstage_path, original_filepath_as_name, unstage_filepath_as_name))
     unstage_storage_details = {
-        'unstage_parent_folder': unstage_parent_folder,
-        'unstage_file_destination': unstage_file_destination
+        mk.UNSTAGE_ROOT: unstage_parent_folder,
+        mk.UNSTAGE_DST: unstage_file_destination
     }
     return unstage_storage_details
 

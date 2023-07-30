@@ -13,6 +13,7 @@ from src.enumerations import CollectionType
 from src.enumerations import Class
 from src.enumerations import FileAttribute
 from src.enumerations import Hash
+from src.enumerations import MetadataKey as mk
 from src.enumerations import Progress
 from src.lib.lib import loading_dialog
 from src.lib.lib import read_all_files
@@ -333,15 +334,12 @@ class CollectionManager:
 
             # Collect the lengths of each file name
             file_name_data = []
-            file_name_datum = \
-                namedtuple('file_name_datum', ['index', 'length', 'name'])
+            file_name_datum = namedtuple(
+                'file_name_datum', ['index', 'length', 'name'])
             # Collect data for each file
             for idx, file in enumerate([parent_file, * list(child_files)]):
-                file_name_data.append(file_name_datum(
-                    index=idx,
-                    length=len(file),
-                    name=file)
-                )
+                file_name_data.append(
+                    file_name_datum(index=idx, length=len(file), name=file))
 
             # Get the shortest file length and its index
             # Initial value beyond reasonable file lengths
@@ -384,49 +382,42 @@ class CollectionManager:
                     # Transform the former parent file into a child file
                     old_parent_file = file
                     file_metadata = {
-                        'collection': child_files[new_parent_file]['collection'],
-                        'hash': child_files[new_parent_file]['hash'],
-                        'name': old_parent_file,
-                        'original': new_parent_file,
-                        'parent': None,
-                        'size': child_files[new_parent_file]['size']
+                        mk.COLLECTION: child_files[new_parent_file][mk.COLLECTION],
+                        mk.HASH: child_files[new_parent_file][mk.HASH],
+                        mk.NAME: old_parent_file,
+                        mk.ORIGINAL: new_parent_file,
+                        mk.PARENT: None,
+                        mk.SIZE: child_files[new_parent_file][mk.SIZE]
                     }
-                    if new_parent_file not in duplicate_metadata:
-                        duplicate_metadata[new_parent_file] = {file: file_metadata}
-                    else:
-                        duplicate_metadata[new_parent_file].update({file: file_metadata})
-                    if file in duplicate_metadata:
-                        del duplicate_metadata[file]
+                    self.meta.update_duplicate_metadata(
+                        new_parent_file, duplicate_metadata,
+                        file, file_metadata)
+                    self.meta.delete_entry(duplicate_metadata, file)
                     continue  # The former parent is handled separately
                 file_metadata = {
-                    'collection': child_files[file]['collection'],
-                    'hash': child_files[file]['hash'],
-                    'name': file,
-                    'original': files_sorted[0],
-                    'parent': child_files[file]['parent'],
-                    'size': child_files[file]['size']
+                    mk.COLLECTION: child_files[file][mk.COLLECTION],
+                    mk.HASH: child_files[file][mk.HASH],
+                    mk.NAME: file,
+                    mk.ORIGINAL: files_sorted[0],
+                    mk.PARENT: child_files[file][mk.PARENT],
+                    mk.SIZE: child_files[file][mk.SIZE]
                 }
-                if new_parent_file not in duplicate_metadata:
-                    duplicate_metadata[new_parent_file] = {file: file_metadata}
-                else:
-                    duplicate_metadata[new_parent_file].update({file: file_metadata})
-                if file in duplicate_metadata:
-                    del duplicate_metadata[file]
+                self.meta.update_duplicate_metadata(
+                    new_parent_file, duplicate_metadata,
+                    file, file_metadata)
 
         return duplicate_metadata
-
-    def _populate_duplicate_metadata(self, collection_name):
-        collection_metadata = self.meta.get_collection_metadata(collection_name, 'ARCHIVE')
-        pass
 
     def generate_hashes(self, collection_name, file_type) -> dict:
         print(f'generate_hashes')
 
         file_metadata = None
-        if file_type == 'ARCHIVE':
-            file_metadata = self.meta.get_files(collection_name, 'ARCHIVE')
-        elif file_type == 'SOURCE':
-            file_metadata = self.meta.get_files(collection_name, 'SOURCE')
+        if file_type == CollectionType.ARCHIVE:
+            file_metadata = \
+                self.meta.get_files(collection_name, CollectionType.ARCHIVE)
+        elif file_type == CollectionType.SOURCE:
+            file_metadata = \
+                self.meta.get_files(collection_name, CollectionType.SOURCE)
 
         if not file_metadata:
             raise RuntimeError(f'No file metadata')

@@ -11,6 +11,7 @@ from subprocess import run
 # imports, project
 from src.enumerations import Class
 from src.enumerations import ConfigKey
+from src.enumerations import MetadataKey as mk
 
 
 class FileManager:
@@ -131,8 +132,8 @@ class FileManager:
 
         :param duplicate_details: file destination details
         """
-        duplicate_file = duplicate_details['name']
-        duplicate_file_dst = duplicate_details['unstage_file_destination']
+        duplicate_file = duplicate_details[mk.NAME]
+        duplicate_file_dst = duplicate_details[mk.UNSTAGE_DST]
         self.move_file(
             src=duplicate_file,
             dst=duplicate_file_dst
