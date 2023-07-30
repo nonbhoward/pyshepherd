@@ -128,6 +128,7 @@ class CollectionManager:
                 self.meta.get_collection_metadata(
                     collection_name,
                     CollectionType.ARCHIVE)
+
             # TODO bug, archive metadata is never empty since files are always present
             if collection_archive_file_metadata:
                 self.unstage_archive(collection_name)

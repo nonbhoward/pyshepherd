@@ -18,8 +18,8 @@ file_a_hash = 'abcd'
 duplicate_file_a = '/path/to/duplicate/file/a'
 path_to_file_a = '/path/to/file/a'
 size_file_a = 10
-path_to_unstage_file_a_root = '/path/to/unstage/file/a/root'
-path_to_unstage_duplicate_file_a = '/path/to/unstage/duplicate/file/a'
+path_to_file_a_unstage_root = '/path/to/unstage/file/a/root'
+path_to_file_a_unstage_dst = '/path/to/unstage/duplicate/file/a'
 soft_link_target = '/path/to/soft/link/target'
 soft_link_label = '/path/to/soft/link/label'
 
@@ -61,8 +61,8 @@ example_collections_metadata = {
                                 'size': size_file_a
                             },
                             'size': size_file_a,
-                            'unstage_parent_folder': path_to_unstage_file_a_root,
-                            'unstage_file_destination': path_to_unstage_duplicate_file_a,
+                            'unstage_root': path_to_file_a_unstage_root,
+                            'unstage_dst': path_to_file_a_unstage_dst,
                             'soft_link_command': [
                                 'ln', '-s-', soft_link_target, soft_link_label
                             ]

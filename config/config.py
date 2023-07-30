@@ -45,9 +45,9 @@ config = {
     # For maximum size, 0 sets no size limit
     ConfigKey.FILE_SIZE_TO_HASH_MIN: 0,
     ConfigKey.FILE_SIZE_TO_HASH_MAX: 0,
-    # Available values : md5, sha1
+    # Available values : MD5, SHA1
     #   Determines which hashing algorithm to use
-    ConfigKey.HASH_ALGO: 'md5',
+    ConfigKey.HASH_ALGO: 'MD5',
     # Flag to toggle sorting files to determine original
     # This feature will compare the original and duplicate files, sorting them
     #   alphabetically, and declares the "alphabetically first" file as the

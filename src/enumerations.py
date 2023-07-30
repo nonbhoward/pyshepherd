@@ -128,6 +128,7 @@ class MetadataKey:
 
 class Network:
     # Define network interface requirements
+    # TODO this shouldn't be hardcoded
     interface = {
         'wlp0s20f3': {}
     }
