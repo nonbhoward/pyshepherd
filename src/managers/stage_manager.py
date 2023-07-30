@@ -64,18 +64,16 @@ class StageManager:
             if 'duplicates' not in original_file_metadata_dc:
                 continue  # items without duplicates are unprocessed
             duplicate_metadata_dc = original_file_metadata_dc['duplicates']
-            for duplicate_file_dc, duplicate_file_metadata in duplicate_metadata_dc.items():
+            for _, duplicate_file_metadata in duplicate_metadata_dc.items():
                 unstage_storage_details = \
                     _build_unstage_storage_details(
-                        original_file_dc,
-                        duplicate_file_dc,
+                        duplicate_file_metadata,
                         unstage_path
                     )
 
                 self.detail_manager.set_unstage_storage_details(
                     collection_metadata,
-                    original_file_dc,
-                    duplicate_file_dc,
+                    duplicate_file_metadata,
                     unstage_storage_details
                 )
 
@@ -101,8 +99,7 @@ class StageManager:
 
                 self.detail_manager.set_soft_link_command(
                     collection_metadata,
-                    original_file_dc,
-                    duplicate_file_dc,
+                    duplicate_file_metadata,
                     soft_link_command
                 )
 
@@ -120,22 +117,24 @@ class StageManager:
                 continue  # no duplicates for this file
             duplicate_details = duplicate_metadata['duplicates']
             for duplicate_file, duplicate_details in duplicate_details.items():
-                file_manager.create_required_folders(duplicate_details)
+                duplicate_unstage_parent_folder = duplicate_details['unstage_parent_folder']
+                file_manager.create_required_folders(duplicate_unstage_parent_folder)
                 soft_link_command = duplicate_details['soft_link_command']
                 file_manager.create_soft_link(soft_link_command)
-                file_manager.move_duplicate_file(duplicate_file, duplicate_metadata)
+                file_manager.move_duplicate_file(duplicate_details)
 
 
-def _build_unstage_storage_details(original: str,
-                                   unstage_file: str,
-                                   unstage_path: str) -> dict:
+def _build_unstage_storage_details(
+        duplicate_file_metadata: dict,
+        unstage_path: str) -> dict:
     """Build the unstaging paths
 
-    :param original: the parent file for the duplicate to be unstaged
-    :param unstage_file: the duplicate file to be moved to unstaging
+    : param duplicate_file_metadata: duplicate file metadata
     :param unstage_path: the unstaging path
     :return:
     """
+    original = duplicate_file_metadata['original']
+    unstage_file = duplicate_file_metadata['name']
     original_filepath_as_name = convert_filepath_to_filename(original)
     unstage_filepath_as_name = convert_filepath_to_filename(unstage_file)
     unstage_parent_folder = str(Path(unstage_path, original_filepath_as_name))
@@ -155,6 +154,6 @@ def _build_soft_link_command(original: str, unstage_path: str) -> list:
     :param unstage_path: the unstaging path
     """
     soft_link_name = convert_filepath_to_soft_link_name(original)
-    soft_link_label = str(Path(unstage_path, soft_link_name))
+    soft_link_label = str(Path(unstage_path, soft_link_name, soft_link_name))
     soft_link_command = build_soft_link_command(original, soft_link_label)
     return soft_link_command

@@ -92,16 +92,14 @@ class FileManager:
                       f'{default_path}, {exc}')
 
     @staticmethod
-    def create_required_folders(duplicate_details: dict) -> None:
+    def create_required_folders(duplicate_parent_folder: str) -> None:
         """Recursively create all parent folders up to and including the parent
             directory being requested
 
-        :param duplicate_details: metadata used to create the folders
+        :param duplicate_parent_folder: metadata used to create the folders
         """
-        unstage_parent_folder = str(duplicate_details['unstage_parent_folder'])
-
         # Convenience
-        udes = unstage_destination_elements = unstage_parent_folder.split('/')
+        udes = unstage_destination_elements = duplicate_parent_folder.split('/')
 
         progressive_path = ''
         for ude in udes:
@@ -128,19 +126,16 @@ class FileManager:
             print(f'Failed to create soft link : {soft_link_command}, {exc}')
             raise exc
 
-    def move_duplicate_file(self,
-                            duplicate_file: str,
-                            duplicate_metadata: dict) -> None:
+    def move_duplicate_file(self, duplicate_details: dict) -> None:
         """Move a file
 
-        :param duplicate_file: file source
-        :param duplicate_metadata: file destination details
+        :param duplicate_details: file destination details
         """
-        unstage_file_dst = \
-            self.detail_manager.get_unstage_file_dst_from(duplicate_metadata)
+        duplicate_file = duplicate_details['name']
+        duplicate_file_dst = duplicate_details['unstage_file_destination']
         self.move_file(
             src=duplicate_file,
-            dst=unstage_file_dst
+            dst=duplicate_file_dst
         )
 
     def move_file(self, src: str, dst: str) -> None:

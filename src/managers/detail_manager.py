@@ -101,10 +101,6 @@ class DetailManager:
     def skip_soft_links(self):
         return self.config[ConfigKey.SKIP_SOFT_LINKS]
 
-    @property
-    def sort_duplicate_hierarchy(self):
-        return self.config[ConfigKey.SORT_DUPLICATE_HIERARCHY]
-
     # FILES
     @property
     def default_parent_folder(self):
@@ -142,9 +138,6 @@ class DetailManager:
         if file_type == 'ARCHIVE':
             return self.collection_metadata[collection_name]['FILES']['ARCHIVE']
 
-    def get_duplicate_metadata(self, collection_metadata: dict) -> dict:
-        pass
-
     def get_files(self, collection_name, file_type):
         return self.collection_metadata[collection_name]['FILES'][file_type]
 
@@ -169,9 +162,6 @@ class DetailManager:
                 MetadataKey.COLLECTION_PATHS: collection_paths
             }
         }
-
-    def read_metadata(self, collection_name, file_type):
-        return self.collection_metadata[collection_name]['FILES'][file_type]
 
     @staticmethod
     def read_metadata_type(unstage_metadata):
@@ -199,6 +189,8 @@ class DetailManager:
     def set_duplicate_metadata(self, collection_name, duplicate_metadata):
         collection_file_metadata = \
             self.collection_metadata[collection_name]['FILES']['ARCHIVE']
+        if duplicate_metadata is None:
+            return
         for parent_file, children_files in duplicate_metadata.items():
             collection_file_metadata[parent_file].update({
                 'duplicates': children_files
@@ -206,17 +198,19 @@ class DetailManager:
 
     @staticmethod
     def set_soft_link_command(collection_metadata,
-                              original,
-                              duplicate,
+                              duplicate_metadata,
                               command):
+        original = duplicate_metadata['original']
+        duplicate = duplicate_metadata['name']
         collection_metadata[original]['duplicates'][duplicate]['soft_link_command'] = command
 
     @staticmethod
     def set_unstage_storage_details(
             collection_metadata,
-            original_file_dc,
-            unstage_file_dc,
+            duplicate_file_metadata,
             unstage_storage_details):
+        unstage_file_dc = duplicate_file_metadata['name']
+        original_file_dc = duplicate_file_metadata['original']
         collection_metadata[original_file_dc]['duplicates'][unstage_file_dc].update(
             unstage_storage_details)
 

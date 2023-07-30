@@ -122,7 +122,7 @@ class CollectionManager:
 
             # If there is metadata then some duplicates were found
             collection_archive_file_metadata = (
-                self.dm.read_metadata(collection_name, 'ARCHIVE'))
+                self.dm.get_collection_metadata(collection_name, 'ARCHIVE'))
             # TODO bug, archive metadata is never empty since files are always present
             if collection_archive_file_metadata:
                 self.unstage_archive(collection_name)
@@ -197,7 +197,7 @@ class CollectionManager:
 
         # Update collection metadata with file hashes
         self.dm.update_file_hashes(collection_name, 'ARCHIVE', file_hashes)
-        duplicate_metadata = self.archive_search_for_duplicates(collection_name)
+        duplicate_metadata = self.archive_metadata_sorting_algorithm(collection_name)
 
         # Save the metadata instructions to the detail manager
         self.dm.set_duplicate_metadata(collection_name, duplicate_metadata)
@@ -223,15 +223,16 @@ class CollectionManager:
     def read_source(self, paths):
         print(f'read_source')  # TODO
 
-    def archive_search_for_duplicates(self, collection_name):
+    def archive_metadata_sorting_algorithm(self, collection_name):
+        """This is the core sorting algorithm and probably does too much.
+        """
         print(f'archive_self_check')
 
         # Find duplicates
         duplicate_metadata = self._get_archive_duplicates(collection_name)
 
         # Sort duplicates
-        if self.dm.sort_duplicate_hierarchy:
-            duplicate_metadata = self._sort_unstage_hierarchy(duplicate_metadata)
+        duplicate_metadata = self._sort_unstaging_hierarchy(duplicate_metadata)
 
         # Announce and return duplicates
         if duplicate_metadata:
@@ -274,14 +275,18 @@ class CollectionManager:
                         print(f'Duplicate file found in archive : {aa_file}')
                         # Initialize list of duplicates
                         found_duplicates.append(aa_file)
-                        if not duplicate_metadata_for_file:
-                            duplicate_metadata_for_file = \
-                                self.dm.duplicate_metadata_for_file_init(aa_file)
-                        else:
-                            # Update collection of duplicates with new init
-                            duplicate_metadata_for_file.update({
-                                aa_file: {}
-                            })
+                        # Update collection of duplicates with new init
+                        duplicate_metadata_for_file.update({aa_file: {
+                            'collection': collection_name,
+                            'hash': aa_hash,
+                            'name': aa_file,
+                            'parent': {
+                                'hash': a_hash,
+                                'name': a_file,
+                                'size': archive_file_metadata[a_file]['ST_SIZE']
+                            },
+                            'size': archive_file_metadata[aa_file]['ST_SIZE']
+                        }})
 
                         duplicate_metadata.update({
                             a_file: duplicate_metadata_for_file
@@ -293,7 +298,7 @@ class CollectionManager:
 
         return duplicate_metadata
 
-    def _sort_unstage_hierarchy(self, duplicate_metadata):
+    def _sort_unstaging_hierarchy(self, duplicate_metadata):
         print(f'_sort_unstage_hierarchy')
 
         duplicate_metadata_dc = copy.deepcopy(duplicate_metadata)
@@ -338,16 +343,54 @@ class CollectionManager:
                 files_sorted = []
                 for sorted_file_length in sorted(file_lengths):
                     for file_name_datum in file_name_data:
+                        if file_name_datum.name in files_sorted:
+                            continue  # don't add the same file twice
                         if file_name_datum.length == sorted_file_length:
                             files_sorted.append(file_name_datum.name)
-            del duplicate_metadata[parent_file]
 
             # Update the dictionary with the sorted files
-            duplicate_metadata[files_sorted[0]] = {
-                file: {} for file in files_sorted[1:]
-            }
+            # TODO bug this should be reworked since it wipes the dict
+            # TODO revisit above message since rework
+            new_parent_file = files_sorted[0]
+            for file in files_sorted[1:]:
+                if file not in child_files:
+                    # Transform the former parent file into a child file
+                    old_parent_file = file
+                    file_metadata = {
+                        'collection': child_files[new_parent_file]['collection'],
+                        'hash': child_files[new_parent_file]['hash'],
+                        'name': old_parent_file,
+                        'original': new_parent_file,
+                        'parent': None,
+                        'size': child_files[new_parent_file]['size']
+                    }
+                    if new_parent_file not in duplicate_metadata:
+                        duplicate_metadata[new_parent_file] = {file: file_metadata}
+                    else:
+                        duplicate_metadata[new_parent_file].update({file: file_metadata})
+                    if file in duplicate_metadata:
+                        del duplicate_metadata[file]
+                    continue  # The former parent is handled separately
+                file_metadata = {
+                    'collection': child_files[file]['collection'],
+                    'hash': child_files[file]['hash'],
+                    'name': file,
+                    'original': files_sorted[0],
+                    'parent': child_files[file]['parent'],
+                    'size': child_files[file]['size']
+                }
+                if new_parent_file not in duplicate_metadata:
+                    duplicate_metadata[new_parent_file] = {file: file_metadata}
+                else:
+                    duplicate_metadata[new_parent_file].update({file: file_metadata})
+                if file in duplicate_metadata:
+                    del duplicate_metadata[file]
 
         return duplicate_metadata
+
+    def _populate_duplicate_metadata(self, collection_name):
+        collection_metadata = self.dm.get_collection_metadata(collection_name, 'ARCHIVE')
+        pass
 
     def generate_hashes(self, collection_name, file_type) -> dict:
         print(f'generate_hashes')
