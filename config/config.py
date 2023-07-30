@@ -59,15 +59,9 @@ config = {
     # Determines whether soft links will be considered when searching for
     #   duplicate files. Disabled by default to prevent moving soft links
     ConfigKey.SKIP_SOFT_LINKS: True,
-    # Toggles the feature that reads the duplicate (parent and children)
-    #   file names and re-assigns the parent role to one of the children
-    #   using two methods.
-    # Method 1 (Prioritized) : Declares the file with the shortest file
-    #   name to be the parent
-    # Method 2 (Fall back) : If multiple files match the shortest file length
-    #   then the file paths will be sorted alphabetically, with the 'first'
-    #   (closest to 'A') file being declared to be the parent file and all
-    #   others declared to be duplicates
+    # Determines whether the archive should be parsed for unstaging (and then
+    #   unstaged)
+    ConfigKey.UNMERGE_ARCHIVE: True,
 
     # FILE MANAGER VALUES BELOW
     ConfigKey.DEFAULT_PARENT_FOLDER: '_PYSHEPHERD',
