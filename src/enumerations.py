@@ -7,10 +7,6 @@ import os
 user = os.environ.get('USER')
 
 
-class ArchiveType:
-    ARCHIVE = 'ARCHIVE'
-
-
 class Class:
     COLLECTION_MANAGER = 'COLLECTION_MANAGER'
     CONFIG_MANAGER = 'CONFIG_MANAGER'
@@ -18,6 +14,11 @@ class Class:
     METADATA_MANAGER = 'METADATA_MANAGER'
     STAGE_MANAGER = 'STAGE_MANAGER'
     SYSTEM_MANAGER = 'SYSTEM_MANAGER'
+
+
+class CollectionType:
+    ARCHIVE = 'ARCHIVE'
+    SOURCE = 'SOURCE'
 
 
 class Command:
@@ -102,10 +103,16 @@ class FileAttribute:
     ST_SIZE = 'ST_SIZE'
 
 
+class Hash:
+    MD5 = 'MD5'
+    SHA1 = 'SHA1'
+
+
 class MetadataKey:
     COLLECTION_NAME = 'COLLECTION_NAME'
     COLLECTION_PATHS = 'COLLECTION_PATHS'
     DUPLICATES = 'DUPLICATES'
+    HASH = 'HASH'
     TYPE = 'TYPE'
     UNSTAGE = 'UNSTAGE'
 

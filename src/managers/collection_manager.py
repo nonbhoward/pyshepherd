@@ -9,8 +9,10 @@ import copy
 import sys
 
 # imports, project
+from src.enumerations import CollectionType
 from src.enumerations import Class
 from src.enumerations import FileAttribute
+from src.enumerations import Hash
 from src.enumerations import Progress
 from src.lib.lib import loading_dialog
 from src.lib.lib import read_all_files
@@ -96,9 +98,9 @@ class CollectionManager:
         self.stage = managers[Class.STAGE_MANAGER](managers)
 
         # Setup hash generator, selection defined in config
-        if self.conf.hash_algo == 'sha1':
+        if self.conf.hash_algo == Hash.SHA1:
             self.conf.hasher_algo = sha1
-        elif self.conf.hash_algo == 'md5':
+        elif self.conf.hash_algo == Hash.MD5:
             self.conf.hasher_algo = md5
         else:
             raise RuntimeError(f'Unknown hash_algo value set : '
@@ -121,8 +123,10 @@ class CollectionManager:
             self.validate_archive(collection_name)
 
             # If there is metadata then some duplicates were found
-            collection_archive_file_metadata = (
-                self.meta.get_collection_metadata(collection_name, 'ARCHIVE'))
+            collection_archive_file_metadata = \
+                self.meta.get_collection_metadata(
+                    collection_name,
+                    CollectionType.ARCHIVE)
             # TODO bug, archive metadata is never empty since files are always present
             if collection_archive_file_metadata:
                 self.unstage_archive(collection_name)
@@ -132,7 +136,9 @@ class CollectionManager:
     def validate_paths(self, collection_name) -> None:
         # Validate collection paths, create defaults if option enabled
         archive_paths_set_in_config_exist = \
-            self.validate_collection_paths(collection_name, 'ARCHIVE')
+            self.validate_collection_paths(
+                collection_name,
+                CollectionType.ARCHIVE)
         # TODO should move this out of config
         create_default_archive_paths = self.conf.create_default_archive_paths
         if not archive_paths_set_in_config_exist and create_default_archive_paths:
@@ -141,7 +147,9 @@ class CollectionManager:
 
         # Validate source paths, create defaults if option enabled
         source_paths_set_in_config_exist = \
-            self.validate_collection_paths(collection_name, 'SOURCE')
+            self.validate_collection_paths(
+                collection_name,
+                CollectionType.SOURCE)
         create_default_source_paths = self.conf.create_default_source_paths
         if not source_paths_set_in_config_exist and create_default_source_paths:
             self.file.create_default_source_paths(
@@ -149,12 +157,12 @@ class CollectionManager:
 
     def validate_collection_paths(self, collection_name, paths_type) -> bool:
         # Read the paths associated with the path type
-        if paths_type == 'ARCHIVE':
+        if paths_type == CollectionType.ARCHIVE:
             evaluation_paths = [
                 self.conf.get_path_archive(collection_name),
                 self.conf.get_path_unstage(collection_name)
             ]
-        elif paths_type == 'SOURCE':
+        elif paths_type == CollectionType.SOURCE:
             evaluation_paths = [
                 self.conf.get_path_source(collection_name),
                 self.conf.get_path_graveyard(collection_name),
@@ -185,20 +193,29 @@ class CollectionManager:
         # Read all files at path
         duplicate_metadata = read_all_files(path_archive, self.conf.skip_soft_links)
 
-        self.meta.init_file_metadata(collection_name, duplicate_metadata, 'ARCHIVE')
+        self.meta.init_file_metadata(
+            collection_name,
+            duplicate_metadata,
+            CollectionType.ARCHIVE)
 
         # If no files are found
-        archive_files = self.meta.get_files(collection_name, 'ARCHIVE')
+        archive_files = \
+            self.meta.get_files(collection_name, CollectionType.ARCHIVE)
         if not archive_files:
             print(f'Archive is empty or path is incorrect : {path_archive}')
             exit()
 
         # Read the files and populate the metadata instructions for unstaging
-        file_hashes = self.generate_hashes(collection_name, 'ARCHIVE')
+        file_hashes = \
+            self.generate_hashes(collection_name, CollectionType.ARCHIVE)
 
         # Update collection metadata with file hashes
-        self.meta.update_file_hashes(collection_name, 'ARCHIVE', file_hashes)
-        duplicate_metadata = self.archive_metadata_sorting_algorithm(collection_name)
+        self.meta.update_file_hashes(
+            collection_name,
+            CollectionType.ARCHIVE,
+            file_hashes)
+        duplicate_metadata = (
+            self.archive_metadata_sorting_algorithm(collection_name))
 
         # Save the metadata instructions to the detail manager
         self.meta.set_duplicate_metadata(collection_name, duplicate_metadata)
@@ -207,12 +224,13 @@ class CollectionManager:
         print(f'unstage_archive')
         unstage_path = self.conf.get_path_unstage(collection_name)
         collection_metadata = \
-            self.meta.get_collection_metadata(collection_name, file_type='ARCHIVE')
+            self.meta.get_collection_metadata(
+                collection_name,
+                CollectionType.ARCHIVE)
         self.stage.load_metadata(
             collection_metadata,
             unstage_path,
-            file_type='ARCHIVE'
-        )
+            CollectionType.ARCHIVE)
         self.stage.unstage_files(collection_metadata, self.file)
 
     def parse_source(self, source_files):
@@ -246,55 +264,63 @@ class CollectionManager:
     def _get_archive_duplicates(self, collection_name) -> dict:
         print(f'_get_archive_duplicates')
 
-        archive_file_metadata = self.meta.get_archive_file_metadata(collection_name, 'ARCHIVE')
-        archive_file_metadata_dc = copy.deepcopy(archive_file_metadata)
+        collection_metadata = \
+            self.meta.get_collection_file_metadata(
+                collection_name,
+                CollectionType.ARCHIVE)
+        collection_metadata_dc = copy.deepcopy(collection_metadata)
         found_duplicates = []
         # While dictionary has files
         duplicate_metadata = {}  # Duplicate metadata for all files
-        while list(archive_file_metadata_dc.keys()):
+        while list(collection_metadata_dc.keys()):
             # This flag is used to escape the external for loop after a
             #   duplicate file is found
 
             # Iterate over a copy of the archive against another copy
-            for a_file in archive_file_metadata_dc:
-                a_hash = archive_file_metadata_dc[a_file]['HASH']
+            for parent_file_check in collection_metadata_dc:
+                parent_hash = \
+                    self.meta.get_hash(collection_metadata_dc, parent_file_check)
 
-                if a_file in found_duplicates:
-                    del archive_file_metadata_dc[a_file]  # Prevent infinite loop
+                if parent_file_check in found_duplicates:
+                    # Prevent infinite loop
+                    self.meta.delete_entry(
+                        collection_metadata_dc,
+                        parent_file_check)
                     break  # This file is already identified as a duplicate
 
-                # Init duplicate tracking for this a_file
-                duplicate_metadata_for_file = {}  # Duplicates for this file
-                for aa_file in archive_file_metadata:
-                    aa_hash = archive_file_metadata[aa_file]['HASH']
+                # Init duplicate tracking for this parent_file_check
+                duplicate_metadata_for_parent = {}  # Duplicates for this file
+                for child_file_check in collection_metadata:
+                    child_hash = \
+                        self.meta.get_hash(collection_metadata, child_file_check)
 
-                    if a_file == aa_file:
+                    if parent_file_check == child_file_check:
                         continue  # Do not compare a file with itself
 
                     # Compare the hashes of differing file paths
-                    if a_hash == aa_hash:
-                        print(f'Duplicate file found in archive : {aa_file}')
+                    if parent_hash == child_hash:
+                        print(f'Duplicate file found in archive : {child_file_check}')
                         # Initialize list of duplicates
-                        found_duplicates.append(aa_file)
+                        found_duplicates.append(child_file_check)
                         # Update collection of duplicates with new init
-                        duplicate_metadata_for_file.update({aa_file: {
-                            'collection': collection_name,
-                            'hash': aa_hash,
-                            'name': aa_file,
-                            'parent': {
-                                'hash': a_hash,
-                                'name': a_file,
-                                'size': archive_file_metadata[a_file]['ST_SIZE']
-                            },
-                            'size': archive_file_metadata[aa_file]['ST_SIZE']
-                        }})
+                        self.meta.update_metadata_for_child(
+                            collection_name,
+                            collection_metadata,
+                            duplicate_metadata_for_parent,
+                            parent_name=parent_file_check,
+                            parent_hash=parent_hash,
+                            child_name=child_file_check,
+                            child_hash=child_hash)
 
-                        duplicate_metadata.update({
-                            a_file: duplicate_metadata_for_file
-                        })
+                        self.meta.update_metadata_for_parent(
+                            parent_file=parent_file_check,
+                            parent_metadata=duplicate_metadata_for_parent,
+                            child_metadata=duplicate_metadata)
 
                 # The internal loop has concluded, discard this value
-                del archive_file_metadata_dc[a_file]
+                self.meta.delete_entry(
+                    collection_metadata_dc,
+                    parent_file_check)
                 break  # Force restart of the for loop with new dict
 
         return duplicate_metadata

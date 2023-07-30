@@ -9,7 +9,8 @@ class MetadataManager:
         print(f'Init {self.__class__.__name__}')
         self._collection_metadata = {}
 
-    # Collection
+    # Parent Properties
+
     @property
     def collection_metadata(self):
         return self._collection_metadata
@@ -18,19 +19,29 @@ class MetadataManager:
     def collection_metadata(self, value):
         self._collection_metadata = value
 
-    def get_archive_file_metadata(self, collection_name, file_type):
+    # Children Properties
+
+    @staticmethod
+    def delete_entry(collection_metadata: dict, file: str):
+        del collection_metadata[file]
+
+    def get_collection_file_metadata(self, collection_name, file_type):
         return self.collection_metadata[collection_name]['FILES'][file_type]
 
     def get_collection_metadata(self, collection_name: str, file_type: str) -> dict:
         if file_type == 'ARCHIVE':
             return self.collection_metadata[collection_name]['FILES']['ARCHIVE']
 
+    @staticmethod
+    def get_file_size_from(collection_metadata, file):
+        return collection_metadata[file][FileAttribute.ST_SIZE]
+
     def get_files(self, collection_name, file_type):
         return self.collection_metadata[collection_name]['FILES'][file_type]
 
     @staticmethod
-    def get_file_size_from(collection_metadata, file):
-        return collection_metadata[file][FileAttribute.ST_SIZE]
+    def get_hash(collection_metadata: dict, file: str) -> str:
+        return collection_metadata[file][MetadataKey.HASH]
 
     @staticmethod
     def get_parent_count_from(duplicate_metadata):
@@ -84,6 +95,34 @@ class MetadataManager:
         original_file_dc = duplicate_file_metadata['original']
         collection_metadata[original_file_dc]['duplicates'][unstage_file_dc].update(
             unstage_storage_details)
+
+    @staticmethod
+    def update_metadata_for_child(
+            collection_name: str,
+            collection_metadata: dict,
+            duplicate_metadata_for_file: dict,
+            parent_name: str,
+            parent_hash: str,
+            child_name: str,
+            child_hash: str):
+        duplicate_metadata_for_file.update({child_name: {
+            'collection': collection_name,
+            'hash': child_hash,
+            'name': child_name,
+            'parent': {
+                'hash': parent_hash,
+                'name': parent_name,
+                'size': collection_metadata[parent_name]['ST_SIZE']
+            },
+            'size': collection_metadata[child_name]['ST_SIZE']
+        }})
+
+    @staticmethod
+    def update_metadata_for_parent(
+            parent_file: str,
+            parent_metadata: dict,
+            child_metadata: dict):
+        child_metadata.update({parent_file: parent_metadata })
 
     def update_file_hashes(self, collection_name, file_type: str, file_hashes: dict) -> None:
         files = self.collection_metadata[collection_name]['FILES'][file_type]

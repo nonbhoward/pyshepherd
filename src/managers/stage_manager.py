@@ -8,7 +8,7 @@ from pathlib import Path
 from src.lib.lib import build_soft_link_command
 from src.lib.lib import convert_filepath_to_filename
 from src.lib.lib import convert_filepath_to_soft_link_name
-from src.enumerations import ArchiveType
+from src.enumerations import CollectionType
 from src.enumerations import Class
 
 
@@ -35,7 +35,7 @@ class StageManager:
         :file_type: the type of archive to load SOURCE or ARCHIVE
         """
         print(f'load_metadata')
-        if file_type == ArchiveType.ARCHIVE:
+        if file_type == CollectionType.ARCHIVE:
             self.populate_unstage_metadata(collection_metadata, unstage_path)
 
     def populate_unstage_metadata(self,
