@@ -18,8 +18,8 @@ config = {
     #   collection manager class. Each collection has a label, and four
     #   paths. The use of those paths is described in the collection
     #   manager class documentation
-    ConfigKey.ARCHIVES: {
-        ConfigKey.DEFAULT_ARCHIVE: {
+    ConfigKey.COLLECTION: {
+        ConfigKey.DEFAULT_COLLECTION: {
             ConfigKey.ARCHIVE_PATH:     f'',
             ConfigKey.GRAVEYARD_PATH:   f'',
             ConfigKey.SOURCE_PATH:      f'',
