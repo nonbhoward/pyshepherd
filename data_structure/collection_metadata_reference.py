@@ -1,6 +1,5 @@
-# A dictionary that shows how program metadata is organized,
-#   Typically accessed through the detail_manager's attribute
-#   detail_manager.collection_metadata
+# Example dictionary showing how program metadata is organized.
+# Accessed through the file_metadata_manager's attributes.
 
 # Example values
 
