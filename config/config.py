@@ -68,8 +68,6 @@ config = {
     #   then the file paths will be sorted alphabetically, with the 'first'
     #   (closest to 'A') file being declared to be the parent file and all
     #   others declared to be duplicates
-    ConfigKey.SORT_DUPLICATE_HIERARCHY: True,
-    # COLLECTION MANAGER VALUES ABOVE
 
     # FILE MANAGER VALUES BELOW
     ConfigKey.DEFAULT_PARENT_FOLDER: '_PYSHEPHERD',
