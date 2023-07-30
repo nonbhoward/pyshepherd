@@ -12,14 +12,14 @@ from src.enumerations import Network
 
 class SystemManager:
 
-    def __init__(self, detail_manager):
+    def __init__(self, managers):
         """Initialize the system manager
 
-        :param detail_manager: access to config and helpers
+        :param managers: collection of manager classes
         """
         print(f'Init {self.__class__.__name__}')
-        self.detail_manager = detail_manager
-        self._debug = detail_manager.debug
+        self.conf = managers['config_manager']
+        self._debug = self.conf.debug
         self._network_connected = None
 
     def run(self):
@@ -28,7 +28,7 @@ class SystemManager:
 
         self.disk_check()
 
-        if self.detail_manager.require_network:
+        if self.conf.require_network:
             self.network_check()
 
     @staticmethod
@@ -41,7 +41,7 @@ class SystemManager:
     def network_check(self):
         """Check the network from the command line"""
         print(f'network_check')
-        if not network_ready(self.detail_manager):
+        if not network_ready(self.conf):
             raise OSError(f'Network in unexpected state')
 
 

@@ -14,9 +14,9 @@ from src.enumerations import ConfigKey
 
 class FileManager:
 
-    def __init__(self, detail_manager):
+    def __init__(self, managers):
         print(f'Init {self.__class__.__name__}')
-        self.detail_manager = detail_manager
+        self.conf = managers['config_manager']
 
     @staticmethod
     def check_exists(path):
@@ -25,14 +25,14 @@ class FileManager:
     def create_default_archive_paths(self, archive_name):
         # Build the root path
         home = environ.get("HOME")
-        default_parent_folder = self.detail_manager.default_parent_folder
+        default_parent_folder = self.conf.default_parent_folder
         default_folder_root = str(Path(home, default_parent_folder))
 
         # Build the children paths
-        default_archive_folder = self.detail_manager.default_archive_folder
+        default_archive_folder = self.conf.default_archive_folder
         default_archive_path = str(Path(default_folder_root,
                                         default_archive_folder))
-        default_unstage_folder = self.detail_manager.default_unstage_folder
+        default_unstage_folder = self.conf.default_unstage_folder
         default_unstage_path = str(Path(default_folder_root,
                                         default_unstage_folder))
 
@@ -40,7 +40,7 @@ class FileManager:
         self.create_default_path(default_archive_path)
         self.create_default_path(default_unstage_path)
 
-        self.detail_manager.update_archive_paths({
+        self.conf.update_archive_paths({
             ConfigKey.ARCHIVE_PATH_LABEL: default_archive_path,
             ConfigKey.UNSTAGE_PATH: default_unstage_path
         })
@@ -48,16 +48,16 @@ class FileManager:
     def create_default_source_paths(self, archive_name):
         # Build the root path
         home = environ.get("HOME")
-        default_parent_folder = self.detail_manager.default_parent_folder
+        default_parent_folder = self.conf.default_parent_folder
         default_folder_root = str(Path(home, default_parent_folder))
 
-        default_graveyard_folder = self.detail_manager.default_graveyard_folder
+        default_graveyard_folder = self.conf.default_graveyard_folder
         default_graveyard_path = str(Path(default_folder_root,
                                           default_graveyard_folder))
-        default_source_folder = self.detail_manager.default_source_folder
+        default_source_folder = self.conf.default_source_folder
         default_source_path = str(Path(default_folder_root,
                                        default_source_folder))
-        default_stage_folder = self.detail_manager.default_stage_folder
+        default_stage_folder = self.conf.default_stage_folder
         default_stage_path = str(Path(default_folder_root,
                                       default_stage_folder))
 
@@ -69,7 +69,7 @@ class FileManager:
         self.create_default_path(default_graveyard_path)
         self.create_default_path(default_source_path)
 
-        self.detail_manager.update_source_paths({
+        self.conf.update_source_paths({
             ConfigKey.GRAVEYARD_PATH: default_graveyard_path,
             ConfigKey.STAGE_PATH: default_stage_path,
             ConfigKey.SOURCE_PATH: default_source_path,

@@ -13,15 +13,15 @@ from src.enumerations import ArchiveType
 
 class StageManager:
 
-    def __init__(self, config_manager, metadata_manager):
+    def __init__(self, managers):
         """Manage metadata related to staging and unstaging files
 
-        :param config_manager: access to configuration and helper objects
+        :param managers: collection of management classes
         """
 
         print(f'Init {self.__class__.__name__}')
-        self.conf = config_manager
-        self.meta = metadata_manager
+        self.conf = managers['config_manager']
+        self.meta = managers['metadata_manager']
 
     def load_metadata(self,
                       collection_metadata: dict,

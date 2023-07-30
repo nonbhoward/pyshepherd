@@ -1,4 +1,4 @@
-# Manage details with attributes instead of manually manipulating collections
+# Access to configuration
 
 # imports, project
 from src.enumerations import ConfigKey

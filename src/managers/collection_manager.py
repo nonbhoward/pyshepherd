@@ -79,36 +79,29 @@ class CollectionManager:
         to the unstaging area from the archive. This can be thought of as a
         recycling bin where files can be evaluated before they are deleted.
     """
-    def __init__(self,
-                 config_manager,
-                 file_manager,
-                 metadata_manager,
-                 stage_manager):
+    def __init__(self, managers):
         """Initialize helper classes and pre-runtime configuration
 
-        :param config_manager: fetcher and setter of objects in data structure
-        :param file_manager: writer, mover, and creator of files/folders
-        :param metadata_manager: fetcher and setter for file metadata
-        :param stage_manager: reads and evaluates the archive metadata, uses
+        :param managers: collection of manager classes
             the file_handler to handle files
         """
         print(f'Init {self.__class__.__name__}')
 
         # Initialize and store helper classes
-        self.conf = config_manager
-        self._debug = config_manager.debug
-        self.file = file_manager(config_manager)
-        self.meta = metadata_manager()
-        self.stage = stage_manager(config_manager, self.meta)
+        self.conf = managers['config_manager']
+        self._debug = managers['config_manager'].debug
+        self.file = managers['file_manager'](managers)
+        self.meta = managers['metadata_manager']()
+        self.stage = managers['stage_manager'](managers)
 
         # Setup hash generator, selection defined in config
-        if config_manager.hash_algo == 'sha1':
-            config_manager.hasher_algo = sha1
-        elif config_manager.hash_algo == 'md5':
-            config_manager.hasher_algo = md5
+        if self.conf.hash_algo == 'sha1':
+            self.conf.hasher_algo = sha1
+        elif self.conf.hash_algo == 'md5':
+            self.conf.hasher_algo = md5
         else:
             raise RuntimeError(f'Unknown hash_algo value set : '
-                               f'{config_manager.hash_algo}')
+                               f'{self.conf.hash_algo}')
 
     def run(self) -> None:
         """
