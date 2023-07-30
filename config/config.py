@@ -13,10 +13,10 @@ config = {
     ConfigKey.DEBUG: False,
     # MAIN VALUES ABOVE
 
-    # ARCHIVE MANAGER VALUES BELOW
-    # Archives is the collected archives that will be managed by the
-    #   archive manager class. Each archive has a label, and four
-    #   paths. The use of those paths is described in the archive
+    # COLLECTION MANAGER VALUES BELOW
+    # Collections are the collected directories that will be managed by the
+    #   collection manager class. Each collection has a label, and four
+    #   paths. The use of those paths is described in the collection
     #   manager class documentation
     ConfigKey.ARCHIVES: {
         ConfigKey.DEFAULT_ARCHIVE: {
@@ -33,12 +33,18 @@ config = {
     # Toggle if you want a default path structure to be made for archive
     #   paths which includes the archive and unstage path
     ConfigKey.CREATE_DEFAULT_ARCHIVE_PATHS: True,
-    # Toggle if you want a default path structure to be made for archive
+    # Toggle if you want a default path structure to be made for source
     #   paths which includes the graveyard, source, and stage path
     ConfigKey.CREATE_DEFAULT_SOURCE_PATHS: True,
     # Value chosen to be beyond reasonable file path lengths
     #   It is used for the file length sorting algorithm
     ConfigKey.FILE_NAME_LEN_MAX_VALUE: 9999,
+    # Maximum and minimum file sizes to hash, without a hash, a file will not
+    #   be acted on.
+    # For minimum size, 0 sets no size limit
+    # For maximum size, 0 sets no size limit
+    ConfigKey.FILE_SIZE_TO_HASH_MIN: 0,
+    ConfigKey.FILE_SIZE_TO_HASH_MAX: 0,
     # Available values : md5, sha1
     #   Determines which hashing algorithm to use
     ConfigKey.HASH_ALGO: 'md5',
@@ -62,8 +68,6 @@ config = {
     #   then the file paths will be sorted alphabetically, with the 'first'
     #   (closest to 'A') file being declared to be the parent file and all
     #   others declared to be duplicates
-    ConfigKey.SORT_DUPLICATE_HIERARCHY: True,
-    # ARCHIVE MANAGER VALUES ABOVE
 
     # FILE MANAGER VALUES BELOW
     ConfigKey.DEFAULT_PARENT_FOLDER: '_PYSHEPHERD',

@@ -6,6 +6,7 @@ from os import walk
 from os.path import exists
 from os.path import islink
 from src.enumerations import Command
+from src.enumerations import FileAttribute
 import shutil
 import sys
 
@@ -29,6 +30,7 @@ def convert_filepath_to_filename(file_path: str) -> str:
     """
     # TODO bug, sometimes makes filenames too long for system
     file_name = file_path.replace('/', '_')[1:]
+    # TODO, bug, detect and strip file names with repeating patterns
     return file_name
 
 
@@ -59,26 +61,30 @@ def read_all_files(path: str, skip_soft_links: bool) -> dict:
                     # print(f'Skipping soft-link {file_path} ')
                     continue
                 file_stat = stat(file_path)
+                # TODO compare sizes against size limits
                 all_files[file_path] = {
-                    'st_size': file_stat.st_size
+                    FileAttribute.ST_SIZE: file_stat.st_size
                 }
             else:
                 print(f'Error, file does not exist : {file_path}')
     return all_files
 
 
-def loading_dialog(percentage: float) -> str:
+def loading_dialog(percentage: float, terminal_dialog_padding: int) -> str:
     """Construct the loading dialog from a percentage, taking into account
         the width of the parent terminal
 
     :param percentage: a float value representing a percentage
+    :param terminal_dialog_padding: padding offset to match terminal size
     :return: a string that visually represents the percentage
     """
     if percentage < 0:
         return  # Disregard negative values
 
     # Get loading bar environment
-    loading_bar_length = shutil.get_terminal_size().columns - 7
+    # TODO replace int with padding value
+    loading_bar_length = (
+            shutil.get_terminal_size().columns - terminal_dialog_padding)
 
     # Scale loading bar percent to total width available
     percentage *= 0.01
