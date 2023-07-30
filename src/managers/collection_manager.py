@@ -118,22 +118,29 @@ class CollectionManager:
 
         # Iterate through each collection
         for collection_name, collection_paths in self.conf.collection_config.items():
+
+            # Initialize collection metadata with base information
             self.meta.init_collection_metadata(collection_name, collection_paths)
 
+            # Validate system paths
             self.validate_paths(collection_name)
+
+            # Verify the archive contains no duplicates
             self.validate_archive(collection_name)
 
-            # If there is metadata then some duplicates were found
-            collection_archive_file_metadata = \
-                self.meta.get_collection_metadata(
-                    collection_name,
-                    CollectionType.ARCHIVE)
-
-            # TODO bug, archive metadata is never empty since files are always present
-            if collection_archive_file_metadata:
+            # Un-merge the archive or merge the source
+            archive_valid = self.meta.archive_valid(collection_name)
+            unstage_archive_enabled = self.conf.unstage_archive
+            if not archive_valid and unstage_archive_enabled:
                 self.unstage_archive(collection_name)
             else:
-                pass  # TODO, handle a source
+                self.stage_source(collection_name)
+
+    def unstage_archive(self, collection_name: str):
+        pass
+
+    def stage_source(self, collection_name: str):
+        pass
 
     def validate_paths(self, collection_name) -> None:
         # Validate collection paths, create defaults if option enabled

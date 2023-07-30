@@ -22,6 +22,15 @@ class MetadataManager:
 
     # Children Properties
 
+    def archive_valid(self, collection_name):
+        collection_archive_metadata = (
+            self.get_collection_metadata(
+                collection_name,
+                CollectionType.ARCHIVE))
+        if collection_archive_metadata:
+            return False
+        return True
+
     @staticmethod
     def delete_entry(metadata: dict, key: str):
         if key not in metadata:
