@@ -79,30 +79,36 @@ class CollectionManager:
         to the unstaging area from the archive. This can be thought of as a
         recycling bin where files can be evaluated before they are deleted.
     """
-    def __init__(self, detail_manager, file_manager, stage_manager):
+    def __init__(self,
+                 config_manager,
+                 file_manager,
+                 metadata_manager,
+                 stage_manager):
         """Initialize helper classes and pre-runtime configuration
 
-        :param detail_manager: fetcher and setter of objects in data structure
+        :param config_manager: fetcher and setter of objects in data structure
         :param file_manager: writer, mover, and creator of files/folders
+        :param metadata_manager: fetcher and setter for file metadata
         :param stage_manager: reads and evaluates the archive metadata, uses
             the file_handler to handle files
         """
         print(f'Init {self.__class__.__name__}')
 
         # Initialize and store helper classes
-        self.dm = detail_manager
-        self._debug = detail_manager.debug
-        self.file_manager = file_manager(detail_manager)
-        self.stage_manager = stage_manager(detail_manager)
+        self.conf = config_manager
+        self._debug = config_manager.debug
+        self.file = file_manager(config_manager)
+        self.meta = metadata_manager()
+        self.stage = stage_manager(config_manager, self.meta)
 
         # Setup hash generator, selection defined in config
-        if detail_manager.hash_algo == 'sha1':
-            detail_manager.hasher_algo = sha1
-        elif detail_manager.hash_algo == 'md5':
-            detail_manager.hasher_algo = md5
+        if config_manager.hash_algo == 'sha1':
+            config_manager.hasher_algo = sha1
+        elif config_manager.hash_algo == 'md5':
+            config_manager.hasher_algo = md5
         else:
             raise RuntimeError(f'Unknown hash_algo value set : '
-                               f'{detail_manager.hash_algo}')
+                               f'{config_manager.hash_algo}')
 
     def run(self) -> None:
         """
@@ -114,15 +120,15 @@ class CollectionManager:
         print(f'Running {self.__class__.__name__}')
 
         # Iterate through each collection
-        for collection_name, collection_paths in self.dm.collection_config.items():
-            self.dm.init_collection_metadata(collection_name, collection_paths)
+        for collection_name, collection_paths in self.conf.collection_config.items():
+            self.meta.init_collection_metadata(collection_name, collection_paths)
 
             self.validate_paths(collection_name)
             self.validate_archive(collection_name)
 
             # If there is metadata then some duplicates were found
             collection_archive_file_metadata = (
-                self.dm.get_collection_metadata(collection_name, 'ARCHIVE'))
+                self.meta.get_collection_metadata(collection_name, 'ARCHIVE'))
             # TODO bug, archive metadata is never empty since files are always present
             if collection_archive_file_metadata:
                 self.unstage_archive(collection_name)
@@ -133,31 +139,32 @@ class CollectionManager:
         # Validate collection paths, create defaults if option enabled
         archive_paths_set_in_config_exist = \
             self.validate_collection_paths(collection_name, 'ARCHIVE')
-        create_default_archive_paths = self.dm.create_default_archive_paths
+        # TODO should move this out of config
+        create_default_archive_paths = self.conf.create_default_archive_paths
         if not archive_paths_set_in_config_exist and create_default_archive_paths:
-            self.file_manager.create_default_archive_paths(
-                self.dm.collection_metadata)
+            self.file.create_default_archive_paths(
+                self.meta.collection_metadata)
 
         # Validate source paths, create defaults if option enabled
         source_paths_set_in_config_exist = \
             self.validate_collection_paths(collection_name, 'SOURCE')
-        create_default_source_paths = self.dm.create_default_source_paths
+        create_default_source_paths = self.conf.create_default_source_paths
         if not source_paths_set_in_config_exist and create_default_source_paths:
-            self.file_manager.create_default_source_paths(
-                self.dm.collection_metadata)
+            self.file.create_default_source_paths(
+                self.meta.collection_metadata)
 
     def validate_collection_paths(self, collection_name, paths_type) -> bool:
         # Read the paths associated with the path type
         if paths_type == 'ARCHIVE':
             evaluation_paths = [
-                self.dm.get_path_archive(collection_name),
-                self.dm.get_path_unstage(collection_name)
+                self.conf.get_path_archive(collection_name),
+                self.conf.get_path_unstage(collection_name)
             ]
         elif paths_type == 'SOURCE':
             evaluation_paths = [
-                self.dm.get_path_source(collection_name),
-                self.dm.get_path_graveyard(collection_name),
-                self.dm.get_path_stage(collection_name)
+                self.conf.get_path_source(collection_name),
+                self.conf.get_path_graveyard(collection_name),
+                self.conf.get_path_stage(collection_name)
             ]
         else:
             raise RuntimeError(f'Unknown value for paths_type : {paths_type}')
@@ -167,7 +174,7 @@ class CollectionManager:
         # Iterate over the evaluation paths
         for evaluation_path in evaluation_paths:
             evaluation_paths_exist.append(
-                self.file_manager.check_exists(evaluation_path)
+                self.file.check_exists(evaluation_path)
             )
 
         # Evaluate path checks
@@ -179,15 +186,15 @@ class CollectionManager:
         print(f'validate_archive')
 
         # Get the path to the archive
-        path_archive = self.dm.get_path_archive(collection_name)
+        path_archive = self.conf.get_path_archive(collection_name)
 
         # Read all files at path
-        duplicate_metadata = read_all_files(path_archive, self.dm.skip_soft_links)
+        duplicate_metadata = read_all_files(path_archive, self.conf.skip_soft_links)
 
-        self.dm.init_file_metadata(collection_name, duplicate_metadata, 'ARCHIVE')
+        self.meta.init_file_metadata(collection_name, duplicate_metadata, 'ARCHIVE')
 
         # If no files are found
-        archive_files = self.dm.get_files(collection_name, 'ARCHIVE')
+        archive_files = self.meta.get_files(collection_name, 'ARCHIVE')
         if not archive_files:
             print(f'Archive is empty or path is incorrect : {path_archive}')
             exit()
@@ -196,23 +203,23 @@ class CollectionManager:
         file_hashes = self.generate_hashes(collection_name, 'ARCHIVE')
 
         # Update collection metadata with file hashes
-        self.dm.update_file_hashes(collection_name, 'ARCHIVE', file_hashes)
+        self.meta.update_file_hashes(collection_name, 'ARCHIVE', file_hashes)
         duplicate_metadata = self.archive_metadata_sorting_algorithm(collection_name)
 
         # Save the metadata instructions to the detail manager
-        self.dm.set_duplicate_metadata(collection_name, duplicate_metadata)
+        self.meta.set_duplicate_metadata(collection_name, duplicate_metadata)
 
     def unstage_archive(self, collection_name: str) -> None:
         print(f'unstage_archive')
-        unstage_path = self.dm.get_path_unstage(collection_name)
+        unstage_path = self.conf.get_path_unstage(collection_name)
         collection_metadata = \
-            self.dm.get_collection_metadata(collection_name, file_type='ARCHIVE')
-        self.stage_manager.load_metadata(
+            self.meta.get_collection_metadata(collection_name, file_type='ARCHIVE')
+        self.stage.load_metadata(
             collection_metadata,
             unstage_path,
             file_type='ARCHIVE'
         )
-        self.stage_manager.unstage_files(collection_metadata, self.file_manager)
+        self.stage.unstage_files(collection_metadata, self.file)
 
     def parse_source(self, source_files):
         print(f'parse_source')  # TODO
@@ -245,7 +252,7 @@ class CollectionManager:
     def _get_archive_duplicates(self, collection_name) -> dict:
         print(f'_get_archive_duplicates')
 
-        archive_file_metadata = self.dm.get_archive_file_metadata(collection_name, 'ARCHIVE')
+        archive_file_metadata = self.meta.get_archive_file_metadata(collection_name, 'ARCHIVE')
         archive_file_metadata_dc = copy.deepcopy(archive_file_metadata)
         found_duplicates = []
         # While dictionary has files
@@ -318,7 +325,7 @@ class CollectionManager:
 
             # Get the shortest file length and its index
             # Initial value beyond reasonable file lengths
-            shortest_len = self.dm.file_name_len_max_value
+            shortest_len = self.conf.file_name_len_max_value
             shortest_idx = None
             file_lengths = []
             for file_name_datum in file_name_data:
@@ -327,7 +334,7 @@ class CollectionManager:
                     shortest_idx = file_name_datum.index
                     shortest_len = file_name_datum.length
 
-            if shortest_len == self.dm.file_name_len_max_value:
+            if shortest_len == self.conf.file_name_len_max_value:
                 raise Exception(f'No file lengths processed')
 
             # Check if multiple files match the shortest length
@@ -389,7 +396,7 @@ class CollectionManager:
         return duplicate_metadata
 
     def _populate_duplicate_metadata(self, collection_name):
-        collection_metadata = self.dm.get_collection_metadata(collection_name, 'ARCHIVE')
+        collection_metadata = self.meta.get_collection_metadata(collection_name, 'ARCHIVE')
         pass
 
     def generate_hashes(self, collection_name, file_type) -> dict:
@@ -397,9 +404,9 @@ class CollectionManager:
 
         file_metadata = None
         if file_type == 'ARCHIVE':
-            file_metadata = self.dm.get_files(collection_name, 'ARCHIVE')
+            file_metadata = self.meta.get_files(collection_name, 'ARCHIVE')
         elif file_type == 'SOURCE':
-            file_metadata = self.dm.get_files(collection_name, 'SOURCE')
+            file_metadata = self.meta.get_files(collection_name, 'SOURCE')
 
         if not file_metadata:
             raise RuntimeError(f'No file metadata')
@@ -411,7 +418,7 @@ class CollectionManager:
         file_metadata_dc = copy.deepcopy(file_metadata)
         for file_dc, file_details_dc in file_metadata_dc.items():
             file_size = \
-                self.dm.get_file_size_from(file_metadata, file_dc)
+                self.meta.get_file_size_from(file_metadata, file_dc)
             if not hash_count % hash_mod:
                 print(f'Generated {hash_count} of {hashes_needed}..')
             file_hashes[file_dc] = {
@@ -440,11 +447,11 @@ class CollectionManager:
         # Initialize loading bar values
         data_read_sum = 0
         large_file = True \
-            if file_size > self.dm.large_file_threshold \
+            if file_size > self.conf.large_file_threshold \
             else False
 
         # Metadata for the loading bar
-        progress_bar_increment = self.dm.progress_bar_increment
+        progress_bar_increment = self.conf.progress_bar_increment
         progress_metadata = {
             Progress.DATA_READ_SUM: 0,
             Progress.DATA_SIZE: file_size,
@@ -459,17 +466,17 @@ class CollectionManager:
                   f'file : {archive_file}')
 
         # Get the hash generator
-        hasher = self.dm.hasher_algo()
+        hasher = self.conf.hasher_algo()
 
         # Read the file and update progress
         with open(archive_file, 'rb') as af:
             while True:
-                data = af.read(self.dm.buf_size)
-                data_read_sum += self.dm.buf_size
+                data = af.read(self.conf.buf_size)
+                data_read_sum += self.conf.buf_size
 
                 # Update progress metadata with file read
                 progress_metadata[
-                    Progress.DATA_READ_SUM] += self.dm.buf_size
+                    Progress.DATA_READ_SUM] += self.conf.buf_size
 
                 # Only show loading bars for large files
                 if large_file:
@@ -482,7 +489,7 @@ class CollectionManager:
         return hasher.hexdigest()
 
     def _count_duplicates(self, duplicate_metadata):
-        parent_count = self.dm.get_parent_count_from(duplicate_metadata)
+        parent_count = self.meta.get_parent_count_from(duplicate_metadata)
         children_count = 0
 
         # Count the children duplicates

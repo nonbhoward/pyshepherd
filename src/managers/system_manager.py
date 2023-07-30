@@ -11,6 +11,7 @@ from src.enumerations import Network
 
 
 class SystemManager:
+
     def __init__(self, detail_manager):
         """Initialize the system manager
 

@@ -13,14 +13,15 @@ from src.enumerations import ArchiveType
 
 class StageManager:
 
-    def __init__(self, detail_manager):
+    def __init__(self, config_manager, metadata_manager):
         """Manage metadata related to staging and unstaging files
 
-        :param detail_manager: access to configuration and helper objects
+        :param config_manager: access to configuration and helper objects
         """
 
         print(f'Init {self.__class__.__name__}')
-        self.detail_manager = detail_manager
+        self.conf = config_manager
+        self.meta = metadata_manager
 
     def load_metadata(self,
                       collection_metadata: dict,
@@ -57,9 +58,7 @@ class StageManager:
         :param unstage_path: path to the unstaging area
         """
         print(f'_update_with_unstaging_destinations')
-        unstage_metadata_dc = copy.deepcopy(
-            self.detail_manager.read_unstage(collection_metadata)
-        )
+        unstage_metadata_dc = copy.deepcopy(collection_metadata)
         for original_file_dc, original_file_metadata_dc in unstage_metadata_dc.items():
             if 'duplicates' not in original_file_metadata_dc:
                 continue  # items without duplicates are unprocessed
@@ -71,7 +70,7 @@ class StageManager:
                         unstage_path
                     )
 
-                self.detail_manager.set_unstage_storage_details(
+                self.meta.set_unstage_storage_details(
                     collection_metadata,
                     duplicate_file_metadata,
                     unstage_storage_details
@@ -97,7 +96,7 @@ class StageManager:
                     unstage_path
                 )
 
-                self.detail_manager.set_soft_link_command(
+                self.meta.set_soft_link_command(
                     collection_metadata,
                     duplicate_file_metadata,
                     soft_link_command
