@@ -308,7 +308,6 @@ class CollectionManager:
 
                     # Compare the hashes of differing file paths
                     if parent_hash == child_hash:
-                        print(f'Duplicate file found in archive : {child_file_check}')
                         # Initialize list of duplicates
                         found_duplicates.append(child_file_check)
                         # Update collection of duplicates with new init
