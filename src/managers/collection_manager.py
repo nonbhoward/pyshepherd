@@ -9,6 +9,7 @@ import copy
 import sys
 
 # imports, project
+from src.enumerations import Class
 from src.enumerations import FileAttribute
 from src.enumerations import Progress
 from src.lib.lib import loading_dialog
@@ -88,11 +89,11 @@ class CollectionManager:
         print(f'Init {self.__class__.__name__}')
 
         # Initialize and store helper classes
-        self.conf = managers['config_manager']
-        self._debug = managers['config_manager'].debug
-        self.file = managers['file_manager'](managers)
-        self.meta = managers['metadata_manager']()
-        self.stage = managers['stage_manager'](managers)
+        self.conf = managers[Class.CONFIG_MANAGER]
+        self._debug = self.conf.debug
+        self.file = managers[Class.FILE_MANAGER](managers)
+        self.meta = managers[Class.METADATA_MANAGER]()
+        self.stage = managers[Class.STAGE_MANAGER](managers)
 
         # Setup hash generator, selection defined in config
         if self.conf.hash_algo == 'sha1':
@@ -473,10 +474,10 @@ class CollectionManager:
 
                 # Only show loading bars for large files
                 if large_file:
-                    display_loading_dialog(progress_metadata)
+                    self.display_loading_dialog(progress_metadata)
                 if not data:
                     if large_file:
-                        display_loading_dialog(complete=True)
+                        self.display_loading_dialog(complete=True)
                     break
                 hasher.update(data)
         return hasher.hexdigest()
@@ -491,41 +492,41 @@ class CollectionManager:
 
         return parent_count, children_count
 
+    def display_loading_dialog(self, progress_metadata=None, complete=False):
+        """Print a loading bar to the console for large files
 
-def display_loading_dialog(progress_metadata=None, complete=False):
-    """Print a loading bar to the console for large files
+        :param progress_metadata: tells the progress bar what to display
+        :param complete: a flag that indicates there is no more data to be read
+        :return: percentage_now, percentage_last_update, the most recent
+            completion percentage and the current completion percentage, their
+            relative values are used to determine when to udpate the loading bar
+        """
 
-    :param progress_metadata: tells the progress bar what to display
-    :param complete: a flag that indicates there is no more data to be read
-    :return: percentage_now, percentage_last_update, the most recent
-        completion percentage and the current completion percentage, their
-        relative values are used to determine when to udpate the loading bar
-    """
+        terminal_dialog_padding = self.conf.terminal_dialog_padding
 
-    # No data remaining, display final dialog
-    if complete:
-        sys.stdout.write(f'\r100% {loading_dialog(100)}')
-        return
+        # No data remaining, display final dialog
+        if complete:
+            sys.stdout.write(
+                f'\r100% {loading_dialog(100, terminal_dialog_padding)}')
+            return
 
-    # Convenience variable, read the most recent percentage
-    percentage_last_update = progress_metadata[Progress.PERCENTAGE_LAST_UPDATE]
+        # Convenience variable, read the most recent percentage
+        percentage_last_update = progress_metadata[Progress.PERCENTAGE_LAST_UPDATE]
 
-    # Calculate the current percentage that has been read
-    data_read_sum = progress_metadata[Progress.DATA_READ_SUM]
-    data_size = progress_metadata[Progress.DATA_SIZE]
-    percentage_now = 100 * data_read_sum / data_size
+        # Calculate the current percentage that has been read
+        data_read_sum = progress_metadata[Progress.DATA_READ_SUM]
+        data_size = progress_metadata[Progress.DATA_SIZE]
+        percentage_now = 100 * data_read_sum / data_size
 
-    # Determine if an update needs to be displayed
-    increment = progress_metadata[Progress.UPDATE_INCREMENT]
-    if percentage_last_update + increment < percentage_now < 99:
-        percentage_last_update = percentage_now
-        sys.stdout.write(
-            f'\r{int(percentage_now)} %'
-            f'{loading_dialog(percentage_now)}')
+        # Determine if an update needs to be displayed
+        increment = progress_metadata[Progress.UPDATE_INCREMENT]
+        if percentage_last_update + increment < percentage_now < 99:
+            percentage_last_update = percentage_now
+            sys.stdout.write(
+                f'\r{int(percentage_now)} %'
+                f'{loading_dialog(percentage_now, terminal_dialog_padding)}')
 
-    # Update progress metadata with current state
-    progress_metadata[Progress.PERCENTAGE_LAST_UPDATE] = percentage_last_update
-    progress_metadata[Progress.PERCENTAGE_NOW] = percentage_now
-    return percentage_now, percentage_last_update
-
-
+        # Update progress metadata with current state
+        progress_metadata[Progress.PERCENTAGE_LAST_UPDATE] = percentage_last_update
+        progress_metadata[Progress.PERCENTAGE_NOW] = percentage_now
+        return percentage_now, percentage_last_update

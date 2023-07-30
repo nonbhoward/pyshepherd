@@ -9,6 +9,7 @@ from src.lib.lib import build_soft_link_command
 from src.lib.lib import convert_filepath_to_filename
 from src.lib.lib import convert_filepath_to_soft_link_name
 from src.enumerations import ArchiveType
+from src.enumerations import Class
 
 
 class StageManager:
@@ -20,8 +21,8 @@ class StageManager:
         """
 
         print(f'Init {self.__class__.__name__}')
-        self.conf = managers['config_manager']
-        self.meta = managers['metadata_manager']
+        self.conf = managers[Class.CONFIG_MANAGER]
+        self.meta = managers[Class.METADATA_MANAGER]
 
     def load_metadata(self,
                       collection_metadata: dict,

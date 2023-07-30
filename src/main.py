@@ -2,6 +2,7 @@
 
 # imports, project
 from config.config import config
+from src.enumerations import Class
 from src.managers.collection_manager import CollectionManager
 from src.managers.config_manager import ConfigManager
 from src.managers.file_manager import FileManager
@@ -11,12 +12,12 @@ from src.managers.system_manager import SystemManager
 from src.shepherd.shepherd import Shepherd
 
 managers = {
-    'collection_manager': CollectionManager,
-    'config_manager': ConfigManager,
-    'file_manager': FileManager,
-    'metadata_manager': MetadataManager,
-    'stage_manager': StageManager,
-    'system_manager': SystemManager
+    Class.COLLECTION_MANAGER: CollectionManager,
+    Class.CONFIG_MANAGER: ConfigManager,
+    Class.FILE_MANAGER: FileManager,
+    Class.METADATA_MANAGER: MetadataManager,
+    Class.STAGE_MANAGER: StageManager,
+    Class.SYSTEM_MANAGER: SystemManager
 }
 
 shepherd = Shepherd(

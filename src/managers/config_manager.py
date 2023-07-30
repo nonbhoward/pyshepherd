@@ -170,5 +170,6 @@ class ConfigManager:
     def progress_bar_increment(self):
         return self.config[ConfigKey.PROGRESS_BAR_INCREMENT]
 
+    @property
     def terminal_dialog_padding(self):
         return self.config[ConfigKey.TERMINAL_DIALOG_PADDING]

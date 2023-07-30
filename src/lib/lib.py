@@ -69,11 +69,12 @@ def read_all_files(path: str, skip_soft_links: bool) -> dict:
     return all_files
 
 
-def loading_dialog(percentage: float) -> str:
+def loading_dialog(percentage: float, terminal_dialog_padding: int) -> str:
     """Construct the loading dialog from a percentage, taking into account
         the width of the parent terminal
 
     :param percentage: a float value representing a percentage
+    :param terminal_dialog_padding: padding offset to match terminal size
     :return: a string that visually represents the percentage
     """
     if percentage < 0:
@@ -81,7 +82,8 @@ def loading_dialog(percentage: float) -> str:
 
     # Get loading bar environment
     # TODO replace int with padding value
-    loading_bar_length = shutil.get_terminal_size().columns - 7
+    loading_bar_length = (
+            shutil.get_terminal_size().columns - terminal_dialog_padding)
 
     # Scale loading bar percent to total width available
     percentage *= 0.01

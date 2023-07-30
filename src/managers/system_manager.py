@@ -5,6 +5,7 @@ from subprocess import run
 from time import sleep
 
 # imports, project
+from src.enumerations import Class
 from src.enumerations import Command
 from src.enumerations import Disk
 from src.enumerations import Network
@@ -18,7 +19,7 @@ class SystemManager:
         :param managers: collection of manager classes
         """
         print(f'Init {self.__class__.__name__}')
-        self.conf = managers['config_manager']
+        self.conf = managers[Class.CONFIG_MANAGER]
         self._debug = self.conf.debug
         self._network_connected = None
 

@@ -9,6 +9,7 @@ from shutil import move
 from subprocess import run
 
 # imports, project
+from src.enumerations import Class
 from src.enumerations import ConfigKey
 
 
@@ -16,7 +17,7 @@ class FileManager:
 
     def __init__(self, managers):
         print(f'Init {self.__class__.__name__}')
-        self.conf = managers['config_manager']
+        self.conf = managers[Class.CONFIG_MANAGER]
 
     @staticmethod
     def check_exists(path):
