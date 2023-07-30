@@ -45,10 +45,6 @@ class DetailManager:
     def config(self):
         return self._config
 
-    @config.setter
-    def config(self, value):
-        self._config = value
-
     @property
     def debug(self):
         return self.config[ConfigKey.DEBUG]
@@ -145,23 +141,12 @@ class DetailManager:
     def get_parent_count_from(duplicate_metadata):
         return len(duplicate_metadata)
 
-    @staticmethod
-    def get_unstage_file_dst_from(unstage_file_details):
-        return unstage_file_details['unstage_file_destination']
-
-    def get_unstage_metadata(self, collection_metadata: dict) -> dict:
-        pass
-
     def init_collection_metadata(self, collection_name, collection_paths):
         self.collection_metadata = {
             collection_name: {
                 MetadataKey.COLLECTION_PATHS: collection_paths
             }
         }
-
-    @staticmethod
-    def read_metadata_type(unstage_metadata):
-        return unstage_metadata[MetadataKey.TYPE]
 
     @staticmethod
     def read_unstage(duplicate_metadata):
@@ -227,9 +212,6 @@ class DetailManager:
                 'HASH': file_hashes[file]['HASH']
             })
 
-    def update_metadata(self, archive_name, file_metadata):
-        self.metadata[archive_name].update({file_metadata})
-
     def update_source_paths(self, archive_paths):
         try:
             self.config[ConfigKey.COLLECTION][ConfigKey.DEFAULT_COLLECTION].update({
@@ -240,27 +222,6 @@ class DetailManager:
         except Exception as exc:
             print(exc)
             raise exc
-
-    # Metadata, Duplicates
-    @staticmethod
-    def duplicate_metadata_for_file_init(file):
-        duplicate_metadata_empty = {
-            file: {
-                'name': file
-            }
-        }
-        return duplicate_metadata_empty
-
-    @staticmethod
-    def duplicate_metadata_add_new_entry(duplicate_metadata, file):
-        # TODO delete
-        duplicate_metadata.update({
-            file: {}
-        })
-
-    # Paths
-    def get_collection(self, collection_name: str) -> dict:
-        return self.collection_config[collection_name]
 
     def get_path_archive(self, collection_name) -> dict:
         path = self.config[

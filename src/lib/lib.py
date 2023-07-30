@@ -80,6 +80,7 @@ def loading_dialog(percentage: float) -> str:
         return  # Disregard negative values
 
     # Get loading bar environment
+    # TODO replace int with padding value
     loading_bar_length = shutil.get_terminal_size().columns - 7
 
     # Scale loading bar percent to total width available
