@@ -7,6 +7,7 @@ from os.path import exists
 from os.path import islink
 from src.enumerations import Command
 from src.enumerations import FileAttribute
+from src.enumerations import MetadataKey as mk
 import shutil
 import sys
 
@@ -51,7 +52,11 @@ def read_all_files(path: str, skip_soft_links: bool) -> dict:
     :param skip_soft_links: a toggle to ignore soft links
     :return: a dictionary of all files, with their file size
     """
-    all_files = {}
+    all_files_metadata = {
+        mk.FILES: {}
+    }
+    unique_file_sizes = []
+    repeat_file_sizes = []
     for root, _, files in walk(path):
         sys.stdout.write(f'\rReading files in {root}')
         for file in files:
@@ -60,14 +65,27 @@ def read_all_files(path: str, skip_soft_links: bool) -> dict:
                 if skip_soft_links and islink(file_path):
                     # print(f'Skipping soft-link {file_path} ')
                     continue
-                file_stat = stat(file_path)
+                file_size = stat(file_path).st_size
                 # TODO compare sizes against size limits
-                all_files[file_path] = {
-                    FileAttribute.ST_SIZE: file_stat.st_size
+
+                if file_size not in unique_file_sizes:
+                    # all file sizes found
+                    unique_file_sizes.append(file_size)
+                elif file_size not in repeat_file_sizes:
+                    # a list of sizes with more than one occurrence
+                    repeat_file_sizes.append(file_size)
+
+                all_files_metadata[mk.FILES][file_path] = {
+                    FileAttribute.ST_SIZE: file_size
                 }
             else:
                 print(f'Error, file does not exist : {file_path}')
-    return all_files
+
+    all_files_metadata.update({
+        mk.REPEAT_FILE_SIZES: repeat_file_sizes,
+    })
+
+    return all_files_metadata
 
 
 def loading_dialog(percentage: float, terminal_dialog_padding: int) -> str:

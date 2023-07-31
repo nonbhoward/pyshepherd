@@ -418,25 +418,28 @@ class CollectionManager:
     def generate_hashes(self, collection_name, file_type) -> dict:
         print(f'generate_hashes')
 
-        file_metadata = None
+        files = None
         if file_type == CollectionType.ARCHIVE:
-            file_metadata = \
+            files = \
                 self.meta.get_files(collection_name, CollectionType.ARCHIVE)
         elif file_type == CollectionType.SOURCE:
-            file_metadata = \
+            files = \
                 self.meta.get_files(collection_name, CollectionType.SOURCE)
 
-        if not file_metadata:
+        if not files:
             raise RuntimeError(f'No file metadata')
+
+        self.filter_disimilar_files(collection_name, file_type)
 
         file_hashes = {}
         hash_count = 0
         hash_mod = 100
-        hashes_needed = len(file_metadata)
-        file_metadata_dc = copy.deepcopy(file_metadata)
-        for file_dc, file_details_dc in file_metadata_dc.items():
+        hashes_needed = len(files)
+        files_dc = copy.deepcopy(files)
+        for file_dc, file_details_dc in files_dc.items():
             file_size = \
-                self.meta.get_file_size_from(file_metadata, file_dc)
+                self.meta.get_file_size_from(files, file_dc)
+
             if not hash_count % hash_mod:
                 print(f'Generated {hash_count} of {hashes_needed}..')
             file_hashes[file_dc] = {
@@ -447,6 +450,20 @@ class CollectionManager:
                     hashes_needed)}
             hash_count += 1
         return file_hashes
+
+    def filter_disimilar_files(self, collection_name: str, file_type: str):
+        files_metadata = self.meta.get_files_metadata(collection_name, file_type)
+        repeat_file_sizes = files_metadata[mk.REPEAT_FILE_SIZES]
+
+        files = files_metadata[mk.FILES]
+        files_dc = copy.deepcopy(files)
+
+        for file_dc, file_details_dc in files_dc.items():
+            file_size = \
+                self.meta.get_file_size_from(files, file_dc)
+
+            if file_size not in repeat_file_sizes:
+                del files[file_dc]
 
     def generate_hash(self,
                       archive_file: str,

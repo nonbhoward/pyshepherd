@@ -44,8 +44,8 @@ class MetadataManager:
             file_type: str):
         return self.collection_metadata[
             collection_name][
-            mk.FILES][
-            file_type]
+            file_type][
+            mk.FILES]
 
     def get_collection_metadata(
             self,
@@ -54,8 +54,8 @@ class MetadataManager:
         if file_type == CollectionType.ARCHIVE:
             return self.collection_metadata[
                 collection_name][
-                mk.FILES][
-                CollectionType.ARCHIVE]
+                CollectionType.ARCHIVE][
+                mk.FILES]
 
     @staticmethod
     def get_file_size_from(
@@ -68,7 +68,12 @@ class MetadataManager:
     def get_files(self, collection_name: str, file_type: str):
         return self.collection_metadata[
             collection_name][
-            mk.FILES][
+            file_type][
+            mk.FILES]
+
+    def get_files_metadata(self, collection_name: str, file_type: str):
+        return self.collection_metadata[
+            collection_name][
             file_type]
 
     @staticmethod
@@ -92,14 +97,16 @@ class MetadataManager:
             collection_name: str,
             files_at_path: dict,
             path_type: str):
-        if mk.FILES not in self.collection_metadata[collection_name]:
-            self.collection_metadata[collection_name][mk.FILES] = {}
         if path_type == CollectionType.ARCHIVE:
-            self.collection_metadata[collection_name][mk.FILES].update({
-                path_type: files_at_path})
+            self.collection_metadata[collection_name].update({
+                CollectionType.ARCHIVE: {
+                    mk.FILES: files_at_path[mk.FILES],
+                    mk.REPEAT_FILE_SIZES: files_at_path[mk.REPEAT_FILE_SIZES]}})
         elif path_type == CollectionType.SOURCE:
-            self.collection_metadata[collection_name][mk.FILES].update({
-                path_type: files_at_path})
+            self.collection_metadata[collection_name].update({
+                CollectionType.SOURCE: {
+                    mk.FILES: files_at_path[mk.FILES],
+                    mk.REPEAT_FILE_SIZES: files_at_path[mk.REPEAT_FILE_SIZES]}})
         else:
             raise RuntimeError(f'Unknown path_type : {path_type}')
 
@@ -110,8 +117,8 @@ class MetadataManager:
         collection_file_metadata = \
             self.collection_metadata[
                 collection_name][
-                mk.FILES][
-                CollectionType.ARCHIVE]
+                CollectionType.ARCHIVE][
+                mk.FILES]
         if duplicate_metadata is None:
             return
         for parent_file, children_files in duplicate_metadata.items():
@@ -187,7 +194,7 @@ class MetadataManager:
             collection_name: str,
             file_type: str,
             file_hashes: dict) -> None:
-        files = self.collection_metadata[collection_name][mk.FILES][file_type]
+        files = self.collection_metadata[collection_name][file_type][mk.FILES]
         for file, file_details in files.items():
             file_details.update({
                 mk.HASH: file_hashes[file][mk.HASH]

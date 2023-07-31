@@ -22,6 +22,7 @@ path_to_file_a_unstage_root = '/path/to/unstage/file/a/root'
 path_to_file_a_unstage_dst = '/path/to/unstage/duplicate/file/a'
 soft_link_target = '/path/to/soft/link/target'
 soft_link_label = '/path/to/soft/link/label'
+list_of_file_sizes = [1, 2, 3, 4]
 
 path_to_fila_b = '/path/to/file/b'
 file_b_size = 20
@@ -44,8 +45,8 @@ example_collections_metadata = {
             'STAGE_PATH': path_to_stage,
             'UNSTAGE_PATH': path_to_stage
         },
-        'FILES': {
-            'ARCHIVE': {
+        'ARCHIVE': {
+            'FILES': {
                 path_to_fila_a: {
                     'ST_SIZE': file_a_size,
                     'HASH': file_a_hash,
@@ -75,7 +76,10 @@ example_collections_metadata = {
                     'DUPLICATES': {}
                 }
             },
-            'SOURCE': {
+            'DUPLICATE_FILE_SIZES': list_of_file_sizes
+        },
+        'SOURCE': {
+            'FILES': {
                 path_to_fila_c: {
                     'ST_SIZE': file_c_size,
                     'HASH': file_c_hash,
@@ -85,8 +89,9 @@ example_collections_metadata = {
                     'ST_SIZE': file_d_size,
                     'HASH': file_d_hash,
                     'DUPLICATES': {}
-                }
-            }
+                },
+            },
+            'DUPLICATE_FILE_SIZES': list_of_file_sizes
         }
     }
 }
