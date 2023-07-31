@@ -59,9 +59,12 @@ config = {
     # Determines whether soft links will be considered when searching for
     #   duplicate files. Disabled by default to prevent moving soft links
     ConfigKey.SKIP_SOFT_LINKS: True,
+    # Determines whether the source should be parsed for staging (and then
+    #   staged)
+    ConfigKey.STAGE_SOURCE: False,
     # Determines whether the archive should be parsed for unstaging (and then
     #   unstaged)
-    ConfigKey.UNMERGE_ARCHIVE: True,
+    ConfigKey.UNSTAGE_ARCHIVE: True,
 
     # FILE MANAGER VALUES BELOW
     ConfigKey.DEFAULT_PARENT_FOLDER: '_PYSHEPHERD',

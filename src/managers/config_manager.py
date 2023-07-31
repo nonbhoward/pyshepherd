@@ -80,8 +80,12 @@ class ConfigManager:
         return self.config[ConfigKey.SKIP_SOFT_LINKS]
 
     @property
+    def stage_source(self) -> bool:
+        return self.config[ConfigKey.STAGE_SOURCE]
+
+    @property
     def unstage_archive(self) -> bool:
-        return self.config[ConfigKey.UNMERGE_ARCHIVE]
+        return self.config[ConfigKey.UNSTAGE_ARCHIVE]
 
     # FILES
     @property

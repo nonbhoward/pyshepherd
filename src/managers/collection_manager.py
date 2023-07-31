@@ -128,19 +128,24 @@ class CollectionManager:
             # Verify the archive contains no duplicates
             self.validate_archive(collection_name)
 
-            # Un-merge the archive or merge the source
+            # Apply settings to the outcome of validity checks
             archive_valid = self.meta.archive_valid(collection_name)
             unstage_archive_enabled = self.conf.unstage_archive
+            stage_source_enabled = self.conf.stage_source
+
+            # Un-merge the archive or merge the source
+            print(f'Archive valid={archive_valid}, unstage_archive_enabled='
+                  f'{unstage_archive_enabled}')
             if not archive_valid and unstage_archive_enabled:
                 self.unstage_archive(collection_name)
-            else:
+            if stage_source_enabled:
                 self.stage_source(collection_name)
 
-    def unstage_archive(self, collection_name: str):
-        pass
-
     def stage_source(self, collection_name: str):
-        pass
+        path_to_source = self.conf.get_path_source(collection_name)
+        skip_soft_links = self.conf.skip_soft_links
+        source_files = read_all_files(path_to_source, skip_soft_links)
+        self.generate_hashes(collection_name, CollectionType.SOURCE)
 
     def validate_paths(self, collection_name) -> None:
         # Validate collection paths, create defaults if option enabled
@@ -148,7 +153,7 @@ class CollectionManager:
             self.validate_collection_paths(
                 collection_name,
                 CollectionType.ARCHIVE)
-        # TODO should move this out of config
+
         create_default_archive_paths = self.conf.create_default_archive_paths
         if not archive_paths_set_in_config_exist and create_default_archive_paths:
             self.file.create_default_archive_paths(
