@@ -447,8 +447,7 @@ class CollectionManager:
             file_size = \
                 self.meta.get_file_size_from(files, file_dc)
 
-            if not hash_count % hash_mod:
-                print(f'Generated {hash_count} of {hashes_needed}..')
+            sys.stdout.write(f'\rGenerated {hash_count} of {hashes_needed}..')
             file_hashes[file_dc] = {
                 FileAttribute.HASH: self.generate_hash(
                     file_dc,
@@ -555,7 +554,7 @@ class CollectionManager:
         # No data remaining, display final dialog
         if complete:
             sys.stdout.write(
-                f'\r100% {loading_dialog(100, terminal_dialog_padding)}')
+                f'\r100% {loading_dialog(100, terminal_dialog_padding)}\n')
             return
 
         # Convenience variable, read the most recent percentage
