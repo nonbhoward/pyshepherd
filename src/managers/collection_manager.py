@@ -98,6 +98,8 @@ class CollectionManager:
         self.meta = managers[Class.METADATA_MANAGER]()
         self.stage = managers[Class.STAGE_MANAGER](managers)
 
+        self.path_to_write_report = self.conf.get_path_to_write_report
+
         # Setup hash generator, selection defined in config
         if self.conf.hash_algo == Hash.SHA1:
             self.conf.hasher_algo = sha1
@@ -576,3 +578,10 @@ class CollectionManager:
         progress_metadata[Progress.PERCENTAGE_LAST_UPDATE] = percentage_last_update
         progress_metadata[Progress.PERCENTAGE_NOW] = percentage_now
         return percentage_now, percentage_last_update
+
+    def write_report(self):
+        file_manager = self.file
+        with open(self.path_to_write_report, 'w') as report_w:
+            report_w.write(f'The following files failed to be moved.\n\n')
+            for src, dst in file_manager.failed_to_move.items():
+                report_w.write(f'{src}\n{dst}\n\n')

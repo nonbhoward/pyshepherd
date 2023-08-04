@@ -23,3 +23,4 @@ class Shepherd:
         print(f'Running {self.__class__.__name__}')
         self.system_manager.run()
         self.collection_manager.run()
+        self.collection_manager.write_report()

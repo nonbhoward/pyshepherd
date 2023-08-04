@@ -56,6 +56,8 @@ config = {
     #   affects the verboseness of some console output, for example, a
     #   loading bar will be displayed when hashing files larger than this
     ConfigKey.LARGE_FILE_THRESHOLD: 100000000,
+    # The absolute path to write report data
+    ConfigKey.PATH_TO_WRITE_REPORT: f'{home}/pyshepherd.report',
     # Determines whether soft links will be considered when searching for
     #   duplicate files. Disabled by default to prevent moving soft links
     ConfigKey.SKIP_SOFT_LINKS: True,

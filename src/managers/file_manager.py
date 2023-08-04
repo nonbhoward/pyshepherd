@@ -19,6 +19,7 @@ class FileManager:
     def __init__(self, managers):
         print(f'Init {self.__class__.__name__}')
         self.conf = managers[Class.CONFIG_MANAGER]
+        self.failed_to_move = {}
 
     @staticmethod
     def check_exists(path):
@@ -134,10 +135,7 @@ class FileManager:
         """
         duplicate_file = duplicate_details[mk.NAME]
         duplicate_file_dst = duplicate_details[mk.UNSTAGE_DST]
-        self.move_file(
-            src=duplicate_file,
-            dst=duplicate_file_dst
-        )
+        self.move_file(src=duplicate_file, dst=duplicate_file_dst)
 
     def move_file(self, src: str, dst: str) -> None:
         """Validate the paths and move the file
@@ -149,8 +147,8 @@ class FileManager:
         try:
             move(src=src, dst=dst)
         except OSError as exc:
-            print(f'Failed to move file : {src} > {dst}')
-            raise exc
+            print(f'Failed to move file : {src} > {dst}, {exc}')
+            self._failed_to_move.update({src: dst})
 
     @staticmethod
     def validate_paths(src: str, dst: str) -> None:

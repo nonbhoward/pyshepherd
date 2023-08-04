@@ -165,6 +165,10 @@ class ConfigManager:
         ]
         return path
 
+    @property
+    def get_path_to_write_report(self) -> str:
+        return self.config[ConfigKey.PATH_TO_WRITE_REPORT]
+
     def get_path_unstage(self, collection_name: str) -> dict:
         path = self.config[
             ConfigKey.COLLECTION][
