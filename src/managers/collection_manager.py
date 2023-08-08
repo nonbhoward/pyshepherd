@@ -5,6 +5,7 @@
 from collections import namedtuple
 from hashlib import md5
 from hashlib import sha1
+from datetime import datetime as dt
 import copy
 import sys
 
@@ -424,6 +425,7 @@ class CollectionManager:
 
     def generate_hashes(self, collection_name, file_type) -> dict:
         print(f'generate_hashes')
+        time_start = dt.now()
 
         files = None
         if file_type == CollectionType.ARCHIVE:
@@ -439,23 +441,53 @@ class CollectionManager:
         self.filter_disimilar_files(collection_name, file_type)
 
         file_hashes = {}
-        hash_count = 0
-        hash_mod = 100
+        data_processed, hash_count = 0, 0
+
+        data_to_process = self.get_sum_of_data_size(files)
         hashes_needed = len(files)
+
         files_dc = copy.deepcopy(files)
         for file_dc, file_details_dc in files_dc.items():
+            time_end = \
+                self.estimate_time_end(time_start, data_processed, data_to_process)
             file_size = \
                 self.meta.get_file_size_from(files, file_dc)
 
-            sys.stdout.write(f'\rGenerated {hash_count} of {hashes_needed}..')
+            sys.stdout.write(f'\rGenerated {hash_count} of {hashes_needed}.. '
+                             f'estimated time end : {time_end}')
             file_hashes[file_dc] = {
                 FileAttribute.HASH: self.generate_hash(
                     file_dc,
                     file_size,
                     hash_count,
                     hashes_needed)}
+            data_processed += file_size
             hash_count += 1
         return file_hashes
+
+    @staticmethod
+    def estimate_time_end(
+            time_start,
+            data_processed: int,
+            data_to_process: int) -> str:
+        if data_processed == 0:
+            return
+        time_to_generate = dt.now() - time_start
+
+        data_multiplicand = data_to_process / data_processed
+        time_extrapolation = time_to_generate * data_multiplicand
+
+        est_time_end = time_start + time_extrapolation
+
+        return est_time_end.__format__("%H:%M:%S")
+
+    @staticmethod
+    def get_sum_of_data_size(files):
+        total_data_size = 0
+        for file, details in files.items():
+            size = details['ST_SIZE']
+            total_data_size += int(size)
+        return total_data_size
 
     def filter_disimilar_files(self, collection_name: str, file_type: str):
         files_metadata = self.meta.get_files_metadata(collection_name, file_type)
@@ -582,5 +614,5 @@ class CollectionManager:
         file_manager = self.file
         with open(self.path_to_write_report, 'w') as report_w:
             report_w.write(f'The following files failed to be moved.\n\n')
-            for src, dst in file_manager.failed_to_move.items():
+            for src, dst in file_manager.failures.items():
                 report_w.write(f'{src}\n{dst}\n\n')

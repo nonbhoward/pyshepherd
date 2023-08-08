@@ -115,7 +115,7 @@ class ConfigManager:
     def update_archive_paths(self, archive_paths: dict):
         try:
             self.config[ConfigKey.COLLECTION][ConfigKey.DEFAULT_COLLECTION].update({
-                ConfigKey.ARCHIVE_PATH_LABEL: archive_paths[ConfigKey.ARCHIVE_PATH_LABEL],
+                ConfigKey.ARCHIVE_PATH: archive_paths[ConfigKey.ARCHIVE_PATH],
                 ConfigKey.UNSTAGE_PATH: archive_paths[ConfigKey.UNSTAGE_PATH]
             })
         except Exception as exc:

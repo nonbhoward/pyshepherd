@@ -19,7 +19,7 @@ class FileManager:
     def __init__(self, managers):
         print(f'Init {self.__class__.__name__}')
         self.conf = managers[Class.CONFIG_MANAGER]
-        self.failed_to_move = {}
+        self.failures = {}
 
     @staticmethod
     def check_exists(path):
@@ -44,7 +44,7 @@ class FileManager:
         self.create_default_path(default_unstage_path)
 
         self.conf.update_archive_paths({
-            ConfigKey.ARCHIVE_PATH_LABEL: default_archive_path,
+            ConfigKey.ARCHIVE_PATH: default_archive_path,
             ConfigKey.UNSTAGE_PATH: default_unstage_path
         })
 
@@ -93,8 +93,7 @@ class FileManager:
                 print(f'Error creating default folder root : '
                       f'{default_path}, {exc}')
 
-    @staticmethod
-    def create_required_folders(duplicate_parent_folder: str) -> None:
+    def create_required_folders(self, duplicate_parent_folder: str) -> None:
         """Recursively create all parent folders up to and including the parent
             directory being requested
 
@@ -111,7 +110,9 @@ class FileManager:
                     mkdir(progressive_path)
                 except OSError as exc:
                     print(f'Failed to make path : {progressive_path}, {exc}')
-                    raise exc
+                    self.update_failures(
+                        action='create_folders',
+                        failure=f'Failed to create path {progressive_path}')
 
     @staticmethod
     def create_soft_link(soft_link_command: list) -> None:
@@ -148,7 +149,14 @@ class FileManager:
             move(src=src, dst=dst)
         except OSError as exc:
             print(f'Failed to move file : {src} > {dst}, {exc}')
-            self._failed_to_move.update({src: dst})
+            self.update_failures(
+                action='move',
+                failure=f'Failed to move {src} to {dst}')
+
+    def update_failures(self, action: str, failure: str):
+        self.failures.update({
+            action: failure
+        })
 
     @staticmethod
     def validate_paths(src: str, dst: str) -> None:
