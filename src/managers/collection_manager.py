@@ -479,7 +479,7 @@ class CollectionManager:
 
         est_time_end = time_start + time_extrapolation
 
-        return est_time_end.__format__("%H:%M:%S")
+        return est_time_end.__format__("%H:%M")
 
     @staticmethod
     def get_sum_of_data_size(files):
