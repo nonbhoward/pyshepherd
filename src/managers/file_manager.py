@@ -144,7 +144,8 @@ class FileManager:
         :param src: the source file
         :param dst: the destination file
         """
-        self.validate_paths(src, dst)
+        if not self.validate_paths(src, dst):
+            return
         try:
             move(src=src, dst=dst)
         except OSError as exc:
@@ -159,14 +160,17 @@ class FileManager:
         })
 
     @staticmethod
-    def validate_paths(src: str, dst: str) -> None:
+    def validate_paths(src: str, dst: str) -> bool:
         """Validate paths exist
 
         :param src: a path to validate
         :param dst: a path to validate
         """
         if not exists(src):
-            raise OSError(f'Src not exist : {src}')
+            print(f'Src not exist : {src}')
+            return False
         dst = '/'.join(dst.split('/')[:-1])
         if not exists(dst):
-            raise OSError(f'Dst not exist : {dst}')
+            print(f'Dst not exist : {dst}')
+            return False
+        return True
